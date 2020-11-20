@@ -1,0 +1,8 @@
+
+build/
+
+devel/
+
+\.catkin_workspace
+
+*.ods
