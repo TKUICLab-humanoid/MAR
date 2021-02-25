@@ -115,7 +115,7 @@ void KidsizeStrategy::strategymain()
         StrategyHead();
         ros_com->sendHeadMotor(HeadMotorID::HorizontalID,marathoninfo->head_x,603);
         tool->Delay(30);
-        ros_com->sendHeadMotor(HeadMotorID::VerticalID,marathoninfo->head_y,603);
+        ros_com->sendHeadMotor(HeadMotorID::VerticalID,marathoninfo->head_y,607);
         tool->Delay(30);
 
 
