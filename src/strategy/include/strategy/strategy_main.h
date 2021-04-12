@@ -27,12 +27,12 @@
 #define A_pix_top 5
 
 //Body
-#define turn_angle 12 //轉彎極限值
-#define debug_line_theta 12 //找線時身體轉的角度
+#define turn_angle  10//轉彎極限值
+#define debug_line_theta  -3//找線時身體轉的角度
 #define debug_speed 80 //100  //速度修正常數
 #define line_right 180//190
 #define line_left 140//130
-#define debug_theta 9 //離線補救角度
+#define debug_theta 5 //離線補救角度
 #define base_slope 0.36//0.32  //速度斜率基準
 //#define side_line_walk_cnt 150
 
