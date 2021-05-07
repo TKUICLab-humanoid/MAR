@@ -177,6 +177,7 @@ public:
     int arrow_height;
     int arrow_mid;
     int arrow_y_mid;
+	int slow_down = 0; //++++++++++
 
 };
 extern MarathonInfo* marathoninfo;
