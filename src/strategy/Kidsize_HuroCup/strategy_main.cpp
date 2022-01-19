@@ -483,13 +483,20 @@ bool KidsizeStrategy::StrategyBody(void)
 
     if (DirFlag == true)
     {
+	//******************************************/
+	if((send_x_value > marathoninfo->min_speed) && (marathoninfo->slow_down == 1))
+        { 
+            send_x_value = send_x_value - marathoninfo->ChangeUpXValue;
+        }
+	//******************************************/
         if (CatchArrowFlag == false)
         {
             marathoninfo->IMU_now = IMU_Value_Yaw();
             
             switch(marathoninfo->arrow)
             {
-            case straight:									//前進
+		
+            case straight:							//前進
                 printf("--------------------------Body straight----------------------------\n");
                 if (debug_line_flag == 1)
                 {
@@ -512,7 +519,7 @@ bool KidsizeStrategy::StrategyBody(void)
                     }
                     else
                     {
-                        if(send_x_value < marathoninfo->max_speed)//1400
+                        if(send_x_value < marathoninfo->max_speed)//1400     
                         { 
                             send_x_value = send_x_value + marathoninfo->ChangeUpXValue;
                         }
@@ -699,6 +706,7 @@ bool KidsizeStrategy::StrategyBody(void)
         marathoninfo->head_line_flag = false;
         marathoninfo->head_sw = 0;
         roll = 0;
+	
         if (marathoninfo->slope >base_slope)    //右轉
         {
             if (send_x_value > marathoninfo->max_speed - 100 - abs(turn_theta)*debug_speed)
@@ -1030,6 +1038,7 @@ bool KidsizeStrategy::readini()
     {
         marathoninfo->arrow = 0;
         CatchArrowFlag = true; 
+	tool->Delay(2000);
     }
 }
 
