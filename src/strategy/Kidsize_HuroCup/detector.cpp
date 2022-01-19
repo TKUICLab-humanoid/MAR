@@ -8,6 +8,7 @@
 #include<opencv2/imgproc/imgproc.hpp>
 #include<opencv2/opencv.hpp>
 #include"strategy/detector.h"
+#include "strategy/strategy_main.h"
 
 using namespace std;
 using namespace cv;
@@ -126,8 +127,10 @@ int main(int argc,char** argv)
 				counter_l = 0;
 			}
 
-			if(counter_s >= 4)
-			{
+			if(counter_s >= 2)
+			{	
+				slow_down = 1;		//************************
+
 				msg.x 			= Straight[0].x;
 				ROS_INFO("SSSSSSSSSSSSSSSSSSSSSSSSSSSSS : msg.x = %d\n",Straight[0].x);
 
@@ -139,16 +142,17 @@ int main(int argc,char** argv)
 
 				msg.width 		= Straight[0].width;
 				ROS_INFO("SSSSSSSSSSSSSSSSSSSSSSSSSSSSS : msg.width = %d\n",Straight[0].width);
-				if(counter_s >= 10)
+				if(counter_s >= 2)
 				{
 					msg.arrow = 1;
 					ROS_INFO("arrow is Straight\n\n");
-
+				    slow_down = 0;		//************************
 					counter_s=0;
 				}
 			}
-			else if(counter_r >= 7)
+			else if(counter_r >= 4)
 			{
+				slow_down = 1;		//************************
 				msg.x 			= Right[0].x;
 				ROS_INFO("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR : msg.x = %d\n",Right[0].x);
 
@@ -160,16 +164,17 @@ int main(int argc,char** argv)
 
 				msg.width 		= Right[0].width;
 				ROS_INFO("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR : msg.width = %d\n",Right[0].width);
-				if(counter_r >= 10)
+				if(counter_r >= 7)
 				{
 					msg.arrow = 2;
 					ROS_INFO("arrow is Right\n\n");
-
+				    slow_down = 0;		//************************
 					counter_r = 0;
 				}
 			}
-			else if(counter_l >= 7)
+			else if(counter_l >= 4)
 			{
+				slow_down = 1;		//************************
 				msg.x 			= Left[0].x;
 				ROS_INFO("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL : msg.x = %d\n",Left[0].x);
 
@@ -181,11 +186,11 @@ int main(int argc,char** argv)
 
 				msg.width 		= Left[0].width;
 				ROS_INFO("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL : msg.width = %d\n",Left[0].width);
-				if(counter_l >= 10)
+				if(counter_l >= 7)
 				{
 					msg.arrow = 3;
 					ROS_INFO("arrow is Left\n\n");
-
+				    slow_down = 0;		//************************
 					counter_l = 0;
 				}
 			}

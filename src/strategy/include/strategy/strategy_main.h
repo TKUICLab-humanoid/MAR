@@ -92,6 +92,7 @@ public:
 	bool LineFlag;
 	bool if_arrow;
 	int  debug_line_flag = 1;
+	int slow_down = 1;
 
     int turn_theta;
     enum direction{no,straight,right,left};
