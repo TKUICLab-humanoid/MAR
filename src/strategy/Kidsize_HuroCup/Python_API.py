@@ -42,12 +42,13 @@ class Sendmessage:
         self.DIOValue = 0x00
         self.is_start = False
         self.time = 0
+        self.originimg=0
         aaaa = rospy.init_node('talker', anonymous=True)
         object_list_sub = rospy.Subscriber("/Object/List",ObjectList, self.getObject)
         label_model_sub = rospy.Subscriber("/LabelModel/List",LabelModelObjectList, self.getLabelModel)
         #compress_image_sub = rospy.Subscriber("compress_image",Image, self.catchImage)
         #image_raw_sub = rospy.Subscriber("colormodel_image",Image, self.RawImage)
-        #origin_image_sub = rospy.Subscriber("orign_image",Image, self.OriginImage)
+        origin_image_sub = rospy.Subscriber("orign_image",Image, self.OriginImage)
         start_sub = rospy.Subscriber("/web/start",Bool, self.startFunction)
         DIO_ack_sub = rospy.Subscriber("/package/FPGAack",Int16, self.DIOackFunction)
         sensor_sub = rospy.Subscriber("/package/sensorpackage",SensorPackage, self.sensorPackageFunction)
@@ -137,8 +138,8 @@ class Sendmessage:
     #    self.cvimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
     #def RawImage(self,msg):
     #    self.rawimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
-    #def OriginImage(self,msg):
-    #    self.originimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
+    def OriginImage(self,msg):
+        self.originimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
     def startFunction(self,msg):
         self.Web = msg.data
     def getLabelModel(self,msg):
