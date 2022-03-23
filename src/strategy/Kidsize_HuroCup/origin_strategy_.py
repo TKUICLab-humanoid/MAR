@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 #coding=utf-8
+from traceback import print_tb
 import rospy
 import numpy as np
 from Python_API import Sendmessage
@@ -8,108 +9,114 @@ import cv2
 
 imgdata = [[None for high in range(240)]for wight in range(320)]
 aa = True
-def imu_go(yaw):
+def imu_right(flag, cnt):
+    if cnt==0:
+        send.sendSensorReset()
+        cnt=1
+    yaw = send.imu_value_Yaw
+    print('----right---------')
+    send.sendContinuousValue(200,0,0,-4,0)
+    if  yaw < -90:
+        print("aaaaaaa")
+        send.sendSensorReset()
+        flag=1
+        cnt=0
+    return flag, cnt
+
+def imu_left(flag,cnt):
+    if cnt==0:
+        send.sendSensorReset()
+        cnt=1
+    yaw = send.imu_value_Yaw
+    print('----------left----------')
+    send.sendContinuousValue(200,0,0,5,0)
+    if  yaw > 90:
+        print("bbbbbbb")
+        send.sendSensorReset()
+        flag=1
+        cnt=0
+    return flag, cnt
+def imu_go(S):
     T=0
-    Y, R, L, S=camera()
-    if L==1:
-        send.sendSensorReset()
-        print('aaaaaaaaaaaaaaaaaa')
-        while 1:
-            send.sendContinuousValue(300,0,0,6,0)
-            if  yaw > 90:
-                break
-    elif R==1:
-        send.sendSensorReset()
-        while 1:
-            send.sendContinuousValue(300,0,0,-6,0)
-            if  yaw < -90:
-                break
-    S = 1000
+    yaw = send.imu_value_Yaw
+    # print("go")
     if 5 > yaw > 3:
-        S = 900
-        T = -2
+        S = 1000
+        T = 0
     elif yaw > 5:
         S = 800
-        T = -3
+        T = -1
     elif -5 <yaw < -3:
-        S = 900
-        T = 2
+        S = 1000
+        T = 3
     elif yaw < -5:
         S = 800
-        T = 3
+        T = 4
     else:
-        S = 1000
+        S += 200
+        T = 2
+    if S > 1500:
+        S = 1500
     return S, T
 
-def camera():
+def camera(Yes, right, left, s, r, l):
     #cap = cv2.VideoCapture(7)
     STRAIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Straight.xml")
     RIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Right.xml")
     LEFT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Left.xml")
-    s=0
-    r=0
-    l=0
-    Yes=0
-    right=0
-    left=0
-    speed=0
     #ret, frame = cap.read()
     frame = send.originimg
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
-
-
     STRAIGHT= STRAIGHT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
     RIGHT= RIGHT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
     LEFT= LEFT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
-    while 1:
-        if len(STRAIGHT)>0:
-            for a in STRAIGHT:  # 單獨框出每一張人臉
-                x, y, w, h = a
-                cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-            s+=1
-            r=0
-            l=0
-            # print("straight")
-        elif len(RIGHT)>0:
-            for a in RIGHT:  # 單獨框出每一張人臉
-                x, y, w, h = a
-                cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-            s=0
-            r+=1
-            l=0
-            speed = 200
-            # print("right")
-        elif len(LEFT)>0:
-            for a in LEFT:  # 單獨框出每一張人臉
-                x, y, w, h = a
-                cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-            s=0
-            r=0
-            l+=1
-            speed = 200
-            # print("left")
-        if s>=10:
-            s=0
-            print("straight")
-            send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
-            Yes=1
-            break
-        elif r>=10:
-            r=0
-            print("right")
-            send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
-            Yes=1
-            right=1
-            break
-        elif l>=10:
-            l=0
-            print("left")
-            send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
-            Yes=1
-            left=1
-            break
-    return Yes, right, left, speed
+    if len(STRAIGHT)>0:
+        for a in STRAIGHT:  # 單獨框出每一張人臉
+            x, y, w, h = a
+            cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+        s+=1
+        r=0
+        l=0
+        # print("straight")
+    elif len(RIGHT)>0:
+        for a in RIGHT:  # 單獨框出每一張人臉
+            x, y, w, h = a
+            cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+        s=0
+        r+=1
+        l=0
+        # print("right")
+    elif len(LEFT)>0:
+        for a in LEFT:  # 單獨框出每一張人臉
+            x, y, w, h = a
+            cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+        s=0
+        r=0
+        l+=1
+        # print("left")
+    if s>=20:
+        s=0
+        print("Straight")
+        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
+        Yes=1
+        right=0
+        left=0
+    elif r>=20:
+        r=0
+        print("Right")
+        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
+        Yes=1
+        right+=1
+        left=0
+    elif l>=20:
+        l=0
+        print("Left")
+        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
+        Yes=1
+        right=0
+        left+=1
+    return Yes, right, left, s, r, l
 def theta():
     s = 0
     s ,out= calculate()
@@ -117,45 +124,45 @@ def theta():
     speed=0
     #walk straight
     if -0.1 < s < 0.1:
-        theta = 0
+        theta = 2
         speed = 1400
     #turn right
     elif -0.2 < s < -0.1:
-        theta = -1
+        theta = 1
         speed = 1300
     elif -0.4 < s < -0.2:
-        theta = -2
+        theta = 0
         speed = 1200
     elif -0.6 < s < -0.4:
-        theta = -3
+        theta = -1
         speed = 1100
     elif -1 < s < -0.6:
-        theta = -4
+        theta = -2
         speed = 1000
     elif -100 < s < -1:
-        theta = -5
+        theta = -3
         speed = 800
     elif s == -100:
-        theta = -7
+        theta = -5
         speed = 100
     #turn left 
     elif 0.2 > s > 0.1:
-        theta = 1
+        theta = 3
         speed = 1300
     elif 0.4 > s > 0.2:
-        theta = 2
+        theta = 4
         speed = 1200
     elif 0.6 > s > 0.4:
-        theta = 3
+        theta = 5
         speed = 1100
     elif 1 > s > 0.6:
-        theta = 4
+        theta = 6
         speed = 1000
     elif 100> s > 1:
-        theta = 5
+        theta = 7
         speed = 800
     elif s == 100:
-        theta = 7
+        theta = 9
         speed = 100
     return theta, speed, out
 def calculate():
@@ -241,23 +248,64 @@ if __name__ == '__main__':
         send = Sendmessage()
         while not rospy.is_shutdown():
             send.sendHeadMotor(2,1400,50)
+            yes=0
+            right=0
+            left=0
+            flag=0
+            cnt=0
+            speed=0
+            s=0
+            r=0 
+            l=0
+            Y=0
+            R=0
+            L=0
             if send.is_start == True and aa == True:
                 send.sendBodyAuto(0,0,0,0,1,0)
-                while 1:
-                    while 1:
+                while 1:                   
+                    if Y==1 and O==1:
+                        Y, R, L, s, r, l=camera(yes, right, left, s, r, l)
+                        print(R)
+                        print('-----')
+                        print(L)
+                        if R>=3:
+                            flag_right, cnt=imu_right(flag,cnt)
+                            yes=Y 
+                            right=R
+                            left=L
+                            if flag_right==1:
+                                right=0
+                                left=0
+                                flag=0
+                                cnt=0
+                                flag_right=0
+                        elif L>=3:
+                            flag_left, cnt=imu_left(flag,cnt)
+                            yes=Y 
+                            right=R
+                            left=L
+                            if flag_left==1:
+                                right=0
+                                left=0
+                                flag=0
+                                cnt=0
+                                flag_left=0
+                        else:
+                            yes=Y 
+                            right=R
+                            left=L
+                            S, T=imu_go(speed)
+                            send.sendContinuousValue(S,0,0,T,0)
+                            speed = S
+                    else:
                         T, S, O=theta()
-                        Y, R, L, speed = camera()
+                        Y, R, L, s, r, l = camera(yes, right, left, s, r, l)
+                        yes=Y 
+                        right=R
+                        left=L
                         print(O)
                         print(Y)
                         send.sendContinuousValue(S,0,0,T,0)
-                        if send.is_start == False:
-                            break
-                        elif Y==1 and O==1:
-                            send.sendSensorReset()
-                            send.sendContinuousValue(0,0,0,0,0)
-                            break
-                    S, T=imu_go(send.imu_value_Yaw)
-                    send.sendContinuousValue(S,0,0,T,0)
                     if send.is_start == False:
                         break
                 aa = False
