@@ -9,57 +9,57 @@ import cv2
 
 imgdata = [[None for high in range(240)]for wight in range(320)]
 aa = True
-def imu_right(flag, cnt):
-    if cnt==0:
+def imu_right(flag, cnt):#90度右轉
+    if cnt==0:#第一次進入，Reset YAW值
         send.sendSensorReset()
         cnt=1
     yaw = send.imu_value_Yaw
-    print('----right---------')
-    send.sendContinuousValue(200,0,0,-4,0)
-    if  yaw < -90:
-        print("aaaaaaa")
+    print('trun right')
+    send.sendContinuousValue(200,-700,0,-5,0)
+    if  yaw < -90:#成功右轉90度
+        print("end")
         send.sendSensorReset()
         flag=1
         cnt=0
     return flag, cnt
 
-def imu_left(flag,cnt):
-    if cnt==0:
+def imu_left(flag,cnt):#90度左轉
+    if cnt==0:#第一次進入，Reset YAW值
         send.sendSensorReset()
         cnt=1
     yaw = send.imu_value_Yaw
-    print('----------left----------')
-    send.sendContinuousValue(200,0,0,5,0)
-    if  yaw > 90:
-        print("bbbbbbb")
+    print('trun left')
+    send.sendContinuousValue(200,-700,0,5,0)
+    if  yaw > 90:#成功左轉90度
+        print("end")
         send.sendSensorReset()
         flag=1
         cnt=0
     return flag, cnt
-def imu_go(S):
+def imu_go(S):#直走
     T=0
     yaw = send.imu_value_Yaw
     # print("go")
     if 5 > yaw > 3:
         S = 1000
-        T = 0
+        T = -1
     elif yaw > 5:
         S = 800
-        T = -1
-    elif -5 <yaw < -3:
+        T = -2
+    elif -5 < yaw < -3:
         S = 1000
-        T = 3
+        T = 1
     elif yaw < -5:
         S = 800
-        T = 4
-    else:
-        S += 200
         T = 2
+    else:
+        S += 100
+        T = 0
     if S > 1500:
         S = 1500
     return S, T
 
-def camera(Yes, right, left, s, r, l):
+def camera(Yes, right, left, s, r, l):#判斷箭頭
     #cap = cv2.VideoCapture(7)
     STRAIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Straight.xml")
     RIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Right.xml")
@@ -95,7 +95,7 @@ def camera(Yes, right, left, s, r, l):
         r=0
         l+=1
         # print("left")
-    if s>=20:
+    if s>=20:#成功連續判斷20次
         s=0
         print("Straight")
         send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
@@ -117,55 +117,55 @@ def camera(Yes, right, left, s, r, l):
         right=0
         left+=1
     return Yes, right, left, s, r, l
-def theta():
+def theta():#判斷斜率
     s = 0
     s ,out= calculate()
     theta=0
     speed=0
     #walk straight
     if -0.1 < s < 0.1:
-        theta = 2
+        theta = 0
         speed = 1400
     #turn right
     elif -0.2 < s < -0.1:
-        theta = 1
+        theta = -1
         speed = 1300
     elif -0.4 < s < -0.2:
-        theta = 0
+        theta = -2
         speed = 1200
     elif -0.6 < s < -0.4:
-        theta = -1
+        theta = -3
         speed = 1100
     elif -1 < s < -0.6:
-        theta = -2
+        theta = -4
         speed = 1000
     elif -100 < s < -1:
-        theta = -3
-        speed = 800
-    elif s == -100:
         theta = -5
+        speed = 700
+    elif s == -100:
+        theta = -7
         speed = 100
     #turn left 
     elif 0.2 > s > 0.1:
-        theta = 3
+        theta = 2
         speed = 1300
     elif 0.4 > s > 0.2:
-        theta = 4
+        theta = 3
         speed = 1200
     elif 0.6 > s > 0.4:
-        theta = 5
+        theta = 4
         speed = 1100
     elif 1 > s > 0.6:
-        theta = 6
+        theta = 5
         speed = 1000
     elif 100> s > 1:
-        theta = 7
-        speed = 800
+        theta = 6
+        speed = 700
     elif s == 100:
-        theta = 9
+        theta = 8
         speed = 100
     return theta, speed, out
-def calculate():
+def calculate():#計算斜率
     cnt1=0
     cnt2=0
     cnt3=0
@@ -203,13 +203,13 @@ def calculate():
                     total_x3+=wight
                     total_y3+=high
                     cnt3+=1
-    if cnt1!=0 and cnt1 > 50:#stop cnt = 0
+    if cnt1 > 50:#去除雜訊點
         center_x1=total_x1/cnt1
         center_y1=total_y1/cnt1
-    if cnt2!=0 and cnt2 > 50:#stop cnt = 0
+    if cnt2 > 50:
         center_x2=total_x2/cnt2
         center_y2=total_y2/cnt2
-    if cnt3!=0 and cnt3 > 50:#stop cnt = 0
+    if cnt3 > 50:
         center_x3=total_x3/cnt3
         center_y3=total_y3/cnt3
     a=int(center_x1)
@@ -218,18 +218,16 @@ def calculate():
     d=int(center_y2)
     e=int(center_x3)
     f=int(center_y3)
-    if center_y2-center_y3==0 or  center_y1-(center_y2+center_y3)/2==0: #no line
+    if center_y2-center_y3==0 or  center_y1-(center_y2+center_y3)/2==0: #找不到線
         print("None")
         slope = 0
-    elif center_x1==0 and center_x2==0 and center_y1==0 and center_y2==0:
-        out=1
+    elif center_x1==0 and center_x2==0 and center_y1==0 and center_y2==0:#機器人偏移或是已經要進入第二階段
+        out=1#進入第二階段的指標，線在機器人螢幕的正下方
         if center_x3 > 240:
-                # print("right")
-                slope=-100
+            slope=-100
         elif center_x3 < 180:
-                # print("left")
-                slope=100
-    else:
+            slope=100
+    else:#計算斜率
         if center_x1==0 and center_y1==0:#first part don't have line
             slope = (center_x3-center_x2)/(center_y3-center_y2)
             send.drawImageFunction(2,0,c,e,d,f,0,0,0)
@@ -248,6 +246,7 @@ if __name__ == '__main__':
         send = Sendmessage()
         while not rospy.is_shutdown():
             send.sendHeadMotor(2,1400,50)
+            send.sendHeadMotor(1,2048,50)
             yes=0
             right=0
             left=0
@@ -263,49 +262,40 @@ if __name__ == '__main__':
             if send.is_start == True and aa == True:
                 send.sendBodyAuto(0,0,0,0,1,0)
                 while 1:                   
-                    if Y==1 and O==1:
+                    if Y==1 and O==1:#判斷是否有箭頭與是否要進入第二階段
                         Y, R, L, s, r, l=camera(yes, right, left, s, r, l)
-                        print(R)
-                        print('-----')
-                        print(L)
-                        if R>=3:
+                        yes=Y 
+                        right=R
+                        left=L
+                        if R>=3:#多次成功判斷右轉
                             flag_right, cnt=imu_right(flag,cnt)
-                            yes=Y 
-                            right=R
-                            left=L
-                            if flag_right==1:
+                            if flag_right==1:#完成90度右轉判斷旗標歸零
                                 right=0
                                 left=0
                                 flag=0
                                 cnt=0
                                 flag_right=0
-                        elif L>=3:
+                        elif L>=3:#多次成功判斷左轉
                             flag_left, cnt=imu_left(flag,cnt)
-                            yes=Y 
-                            right=R
-                            left=L
-                            if flag_left==1:
+                            if flag_left==1:#完成90度左轉判斷旗標歸零
                                 right=0
                                 left=0
                                 flag=0
                                 cnt=0
                                 flag_left=0
-                        else:
-                            yes=Y 
-                            right=R
-                            left=L
+                        else:#沒有任何判斷就直走
                             S, T=imu_go(speed)
-                            send.sendContinuousValue(S,0,0,T,0)
+                            send.sendContinuousValue(S,-700,0,T,0)
                             speed = S
                     else:
                         T, S, O=theta()
-                        Y, R, L, s, r, l = camera(yes, right, left, s, r, l)
+                        Y, R, L, s, r, l = camera(yes, right, left, s, r, l)#判斷箭頭
                         yes=Y 
                         right=R
                         left=L
                         print(O)
                         print(Y)
-                        send.sendContinuousValue(S,0,0,T,0)
+                        send.sendContinuousValue(S,-700,0,T,0)
                     if send.is_start == False:
                         break
                 aa = False
