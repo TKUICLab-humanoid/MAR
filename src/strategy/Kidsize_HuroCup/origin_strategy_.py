@@ -9,13 +9,13 @@ import cv2
 
 imgdata = [[None for high in range(240)]for wight in range(320)]
 aa = True
-def imu_right(flag, cnt):#90度右轉
+def imu_right(flag, cnt,  origin_theta):#90度右轉
     if cnt==0:#第一次進入，Reset YAW值
         send.sendSensorReset()
         cnt=1
     yaw = send.imu_value_Yaw
     print('trun right')
-    send.sendContinuousValue(200,-700,0,-5,0)
+    send.sendContinuousValue(200,-700,0,-5+origin_theta,0)
     if  yaw < -90:#成功右轉90度
         print("end")
         send.sendSensorReset()
@@ -23,41 +23,45 @@ def imu_right(flag, cnt):#90度右轉
         cnt=0
     return flag, cnt
 
-def imu_left(flag,cnt):#90度左轉
+def imu_left(flag,cnt,origin_theta):#90度左轉
     if cnt==0:#第一次進入，Reset YAW值
         send.sendSensorReset()
         cnt=1
     yaw = send.imu_value_Yaw
     print('trun left')
-    send.sendContinuousValue(200,-700,0,5,0)
+    send.sendContinuousValue(200,-700,0,5+origin_theta,0)
     if  yaw > 90:#成功左轉90度
         print("end")
         send.sendSensorReset()
         flag=1
         cnt=0
     return flag, cnt
-def imu_go(S):#直走
+def imu_go(S, origin_theta,cnt):#直走4
+    if cnt==0:#第一次進入，Reset YAW值
+        send.sendSensorReset()
+        cnt=1
     T=0
+    print("go go go!")
     yaw = send.imu_value_Yaw
     # print("go")
     if 5 > yaw > 3:
         S = 1000
-        T = -1
+        T = -1+origin_theta
     elif yaw > 5:
         S = 800
-        T = -2
+        T = -2+origin_theta
     elif -5 < yaw < -3:
         S = 1000
-        T = 1
+        T = 1+origin_theta
     elif yaw < -5:
         S = 800
-        T = 2
+        T = 2+origin_theta
     else:
         S += 100
-        T = 0
+        T = 0+origin_theta
     if S > 1500:
         S = 1500
-    return S, T
+    return S, T, cnt
 
 def camera(Yes, right, left, s, r, l):#判斷箭頭
     #cap = cv2.VideoCapture(7)
@@ -66,7 +70,8 @@ def camera(Yes, right, left, s, r, l):#判斷箭頭
     LEFT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Left.xml")
     #ret, frame = cap.read()
     frame = send.originimg
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    rgb = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+    gray = cv2.cvtColor(rgb, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
     STRAIGHT= STRAIGHT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
     RIGHT= RIGHT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
@@ -75,6 +80,8 @@ def camera(Yes, right, left, s, r, l):#判斷箭頭
         for a in STRAIGHT:  # 單獨框出每一張人臉
             x, y, w, h = a
             cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
+        print("straight")
         s+=1
         r=0
         l=0
@@ -83,6 +90,8 @@ def camera(Yes, right, left, s, r, l):#判斷箭頭
         for a in RIGHT:  # 單獨框出每一張人臉
             x, y, w, h = a
             cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
+        print("right")
         s=0
         r+=1
         l=0
@@ -91,78 +100,80 @@ def camera(Yes, right, left, s, r, l):#判斷箭頭
         for a in LEFT:  # 單獨框出每一張人臉
             x, y, w, h = a
             cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
+        print("left")
         s=0
         r=0
         l+=1
         # print("left")
-    if s>=20:#成功連續判斷20次
+    if s>=10:#成功連續判斷20次
         s=0
-        print("Straight")
+        print("go Straight")
         send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
         Yes=1
         right=0
         left=0
-    elif r>=20:
+    elif r>=10:
         r=0
-        print("Right")
+        print("go Right")
         send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
         Yes=1
         right+=1
         left=0
-    elif l>=20:
+    elif l>=10:
         l=0
-        print("Left")
+        print("go Left")
         send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
         Yes=1
         right=0
         left+=1
     return Yes, right, left, s, r, l
-def theta():#判斷斜率
+def theta(origin_theta):#判斷斜率
     s = 0
     s ,out= calculate()
     theta=0
     speed=0
     #walk straight
     if -0.1 < s < 0.1:
-        theta = 0
-        speed = 1400
+        theta = 0+origin_theta
+        speed = 1200
     #turn right
     elif -0.2 < s < -0.1:
-        theta = -1
-        speed = 1300
-    elif -0.4 < s < -0.2:
-        theta = -2
-        speed = 1200
-    elif -0.6 < s < -0.4:
-        theta = -3
-        speed = 1100
-    elif -1 < s < -0.6:
-        theta = -4
+        theta = -1+origin_theta
         speed = 1000
+    elif -0.4 < s < -0.2:
+        theta = -2+origin_theta
+        speed = 800
+    elif -0.6 < s < -0.4:
+        theta = -3+origin_theta
+        speed = 600
+    elif -1 < s < -0.6:
+        theta = -4+origin_theta
+        speed = 400
     elif -100 < s < -1:
-        theta = -5
-        speed = 700
+        theta = -5+origin_theta
+        speed = 200
     elif s == -100:
-        theta = -7
+        theta = -7+origin_theta
         speed = 100
     #turn left 
     elif 0.2 > s > 0.1:
-        theta = 2
-        speed = 1300
-    elif 0.4 > s > 0.2:
-        theta = 3
-        speed = 1200
-    elif 0.6 > s > 0.4:
-        theta = 4
-        speed = 1100
-    elif 1 > s > 0.6:
-        theta = 5
+        theta = 2+origin_theta
         speed = 1000
-    elif 100> s > 1:
-        theta = 6
+    elif 0.4 > s > 0.2:
+        theta = 3+origin_theta
         speed = 700
+    elif 0.6 > s > 0.4:
+        theta = 4+origin_theta
+        speed = 500
+    elif 1 > s > 0.6:
+        theta = 5+origin_theta
+        speed = 300
+    elif 100> s > 1:
+        theta = 6+origin_theta
+        speed = 200
     elif s == 100:
-        theta = 8
+        theta = 9+origin_theta
         speed = 100
     return theta, speed, out
 def calculate():#計算斜率
@@ -241,6 +252,47 @@ def calculate():#計算斜率
             send.drawImageFunction(2,0,e,h,f,i,0,0,0)
     # print(slope)
     return slope ,out
+def correct_slope(origin_theta,next):
+    s ,out= calculate()
+    speed=0
+    theta=0
+    if -0.1 < s < 0.1:
+        theta = 0+origin_theta
+        next=1
+    #turn right
+    elif -0.2 < s < -0.1:
+        theta = -1+origin_theta
+        speed = -100
+    elif -0.4 < s < -0.2:
+        theta = -2+origin_theta
+        speed = -200
+    elif -0.6 < s < -0.4:
+        theta = -3+origin_theta
+        speed = -200
+    elif -1 < s < -0.6:
+        theta = -4+origin_theta
+        speed = -300
+    elif -100 < s < -1:
+        theta = -5+origin_theta
+        speed = -400
+    #turn left 
+    elif 0.2 > s > 0.1:
+        theta = 2+origin_theta
+        speed = -100
+    elif 0.4 > s > 0.2:
+        theta = 3+origin_theta
+        speed = -200
+    elif 0.6 > s > 0.4:
+        theta = 4+origin_theta
+        speed = -100
+    elif 1 > s > 0.6:
+        theta = 5+origin_theta
+        speed = -100
+    elif 100> s > 1:
+        theta = 6+origin_theta
+        speed = -200
+    return next, theta, speed
+
 if __name__ == '__main__':
     try:
         send = Sendmessage()
@@ -252,50 +304,65 @@ if __name__ == '__main__':
             left=0
             flag=0
             cnt=0
+            cnt_straight=0
             speed=0
+            next_stage=0
             s=0
             r=0 
             l=0
             Y=0
             R=0
             L=0
+            N=0
+            origin_theta=-2
             if send.is_start == True and aa == True:
                 send.sendBodyAuto(0,0,0,0,1,0)
-                while 1:                   
+                while 1:
                     if Y==1 and O==1:#判斷是否有箭頭與是否要進入第二階段
-                        Y, R, L, s, r, l=camera(yes, right, left, s, r, l)
-                        yes=Y 
-                        right=R
-                        left=L
-                        if R>=3:#多次成功判斷右轉
-                            flag_right, cnt=imu_right(flag,cnt)
-                            if flag_right==1:#完成90度右轉判斷旗標歸零
-                                right=0
-                                left=0
-                                flag=0
-                                cnt=0
-                                flag_right=0
-                        elif L>=3:#多次成功判斷左轉
-                            flag_left, cnt=imu_left(flag,cnt)
-                            if flag_left==1:#完成90度左轉判斷旗標歸零
-                                right=0
-                                left=0
-                                flag=0
-                                cnt=0
-                                flag_left=0
-                        else:#沒有任何判斷就直走
-                            S, T=imu_go(speed)
+                        if next_stage==0:
+                            N, T, S=correct_slope(origin_theta,next_stage)
                             send.sendContinuousValue(S,-700,0,T,0)
-                            speed = S
+                            next_stage=N
+                        else:
+                            Y, R, L, s, r, l=camera(yes, right, left, s, r, l)
+                            yes=Y 
+                            right=R
+                            left=L
+                            if R>=3:#多次成功判斷右轉
+                                flag_right, cnt=imu_right(flag,cnt,origin_theta)
+                                if flag_right==1:#完成90度右轉判斷旗標歸零
+                                    right=0
+                                    left=0
+                                    flag=0
+                                    cnt=0
+                                    cnt_straight=0
+                                    flag_right=0
+                            elif L>=3:#多次成功判斷左轉
+                                flag_left, cnt=imu_left(flag,cnt,origin_theta)
+                                if flag_left==1:#完成90度左轉判斷旗標歸零
+                                    right=0
+                                    left=0
+                                    flag=0
+                                    cnt=0
+                                    cnt_straight=0
+                                    flag_left=0
+                            else:#沒有任何判斷就直走
+                                S, T, cnt_straight=imu_go(speed, origin_theta,cnt_straight)
+                                send.sendContinuousValue(S,-700,0,T,0)
+                                speed = S
                     else:
-                        T, S, O=theta()
+                        T, S, O=theta(origin_theta)
                         Y, R, L, s, r, l = camera(yes, right, left, s, r, l)#判斷箭頭
                         yes=Y 
                         right=R
                         left=L
-                        print(O)
-                        print(Y)
-                        send.sendContinuousValue(S,-700,0,T,0)
+                        if O==1:
+                            send.sendContinuousValue(-200,-700,0,-1,0) 
+                            print(O)
+                            print(Y)
+                        else:
+                            send.sendContinuousValue(S,-700,0,T,0)
+
                     if send.is_start == False:
                         break
                 aa = False
