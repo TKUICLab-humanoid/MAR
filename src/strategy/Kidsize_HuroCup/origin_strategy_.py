@@ -47,10 +47,13 @@ def imu_go(S, origin_theta,cnt):#直走4
     # print("go")
     if 5 > yaw > 3:
         S = 1300
-        T = -2+origin_theta
-    elif yaw > 5:
+        T = -5+origin_theta
+    elif 7 > yaw > 5:
         S = 1100
-        T = -3+origin_theta
+        T = -4+origin_theta
+    elif yaw > 7:
+        S = 1000
+        T = -5
     elif -5 < yaw < -3:
         S = 1300
         T = 2+origin_theta
@@ -126,51 +129,58 @@ def camera(Yes, right, left, s, r, l):#判斷箭頭
     return Yes, right, left, s, r, l
 def theta(origin_theta):#判斷斜率
     s = 0
-    s ,out= calculate()
+    s ,out, turn_right, turn_left= calculate()
     theta=0
     speed=0
-    #walk straight
-    if -0.1 < s < 0.1:
-        theta = 0+origin_theta
-        speed = 1500
-    #turn right
-    elif -0.2 < s < -0.1:
-        theta = -3+origin_theta
-        speed = 1400
-    elif -0.4 < s < -0.2:
-        theta = -4+origin_theta
-        speed = 1200
-    elif -0.6 < s < -0.4:
-        theta = -5+origin_theta
+    if turn_right==1:
+        theta = -6
         speed = 1000
-    elif -1 < s < -0.6:
-        theta = -6+origin_theta
-        speed = 800
-    elif -100 < s < -1:
-        theta = -7+origin_theta
-        speed = 500
-    elif s == -100:
-        theta = -9+origin_theta
-        speed = 200
-    #turn left 
-    elif 0.2 > s > 0.1:
-        theta = 3+origin_theta
-        speed = 1400
-    elif 0.4 > s > 0.2:
-        theta = 4+origin_theta
-        speed = 1200
-    elif 0.6 > s > 0.4:
-        theta = 5+origin_theta
+    elif turn_left==1:
+        theta = 6
         speed = 1000
-    elif 1 > s > 0.6:
-        theta = 6+origin_theta
-        speed = 800
-    elif 100> s > 1:
-        theta = 7+origin_theta
-        speed = 500
-    elif s == 100:
-        theta = 9+origin_theta
-        speed = 200
+    else:
+        #walk straight
+        if -0.1 < s < 0.1:
+            theta = 0+origin_theta
+            speed = 1500
+        #turn right
+        elif -0.2 < s < -0.1:
+            theta = -3+origin_theta
+            speed = 1400
+        elif -0.4 < s < -0.2:
+            theta = -4+origin_theta
+            speed = 1200
+        elif -0.6 < s < -0.4:
+            theta = -5+origin_theta
+            speed = 1000
+        elif -1 < s < -0.6:
+            theta = -6+origin_theta
+            speed = 800
+        elif -100 < s < -1:
+            theta = -7+origin_theta
+            speed = 600
+        elif s == -100:
+            theta = -9+origin_theta
+            speed = 200
+        #turn left 
+        elif 0.2 > s > 0.1:
+            theta = 2+origin_theta
+            speed = 1400
+        elif 0.4 > s > 0.2:
+            theta = 3+origin_theta
+            speed = 1200
+        elif 0.6 > s > 0.4:
+            theta = 4+origin_theta
+            speed = 1000
+        elif 1 > s > 0.6:
+            theta = 5+origin_theta
+            speed = 800
+        elif 100> s > 1:
+            theta = 6+origin_theta
+            speed = 600
+        elif s == 100:
+            theta = 8+origin_theta
+            speed = 200
     return theta, speed, out
 def calculate():#計算斜率
     cnt1=0
@@ -192,10 +202,12 @@ def calculate():#計算斜率
     out=0
     a=0
     b=0
+    turn_left=0
+    turn_right=0
     for high in range(240):
         for wight in range(320):
             imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 30 <high < 100:
+            if 30 < high < 100:
                 if imgdata[wight][high] != 0:
                     total_x1+=wight
                     total_y1+=high
@@ -229,71 +241,71 @@ def calculate():#計算斜率
         print("None")
         slope = 0
     elif center_x1==0 and center_x2==0 and center_y1==0 and center_y2==0:#機器人偏移或是已經要進入第二階段
-        out=1#進入第二階段的指標，線在機器人螢幕的正下方
         if center_x3 > 240:
             slope=-100
         elif center_x3 < 180:
             slope=100
     else:#計算斜率
+        if center_x3 < 80 and center_x2 < 80:
+                turn_left=1
+        elif center_x3 > 240 and center_x2 > 240:
+                turn_right=1
         if center_x1==0 and center_y1==0:#first part don't have line
             slope = (center_x3-center_x2)/(center_y3-center_y2)
             send.drawImageFunction(2,0,c,e,d,f,0,0,0)
+            out=1#進入第二階段的指標，線在機器人螢幕的正下方
         elif center_x3==0 and center_y3==0:
             slope = (center_x2-center_x1)/(center_y2-center_y1)
             send.drawImageFunction(2,0,a,c,b,d,0,0,0)
         else:
+            if center_x1 < 80 and center_x2 < 80:
+                turn_left=1
+            elif center_x1 > 240 and center_x2 > 240:
+                turn_right=1
             slope = (center_x3-(center_x1+center_x2)/2)/(center_y3-(center_y1+center_y2)/2)
             h=int((center_x1+center_x2)/2)
             i=int((center_y1+center_y2)/2)
             send.drawImageFunction(2,0,e,h,f,i,0,0,0)
-    # print(slope)
-    return slope ,out
+    print(slope)
+    return slope ,out ,turn_right, turn_left  
 def correct_slope(origin_theta,next):
-    s ,out= calculate()
-    speed=0
-    theta=0
+    s ,out, turn_right, turn_left= calculate()
+    theta = 0
+    speed = 0
     if -0.1 < s < 0.1:
         theta = 0+origin_theta
         next=1
     #turn right
     elif -0.2 < s < -0.1:
         theta = -3+origin_theta
-        speed = -100
     elif -0.4 < s < -0.2:
         theta = -4+origin_theta
-        speed = -200
     elif -0.6 < s < -0.4:
         theta = -5+origin_theta
-        speed = -200
     elif -1 < s < -0.6:
         theta = -6+origin_theta
-        speed = -300
-    elif -100 < s < -1:
+    elif -101 < s < -1:
         theta = -8+origin_theta
-        speed = -400
+        speed = -100
     #turn left 
     elif 0.2 > s > 0.1:
         theta = 3+origin_theta
-        speed = -100
     elif 0.4 > s > 0.2:
         theta = 4+origin_theta
-        speed = -200
     elif 0.6 > s > 0.4:
         theta = 5+origin_theta
-        speed = -100
     elif 1 > s > 0.6:
         theta = 6+origin_theta
-        speed = -100
-    elif 100> s > 1:
+    elif 101> s > 1:
         theta = 8+origin_theta
-        speed = -200
+        speed = -100
     return next, theta, speed
 
 if __name__ == '__main__':
     try:
         send = Sendmessage()
         while not rospy.is_shutdown():
-            send.sendHeadMotor(2,1400,50)
+            send.sendHeadMotor(2,1500,50)
             send.sendHeadMotor(1,2048,50)
             yes=0
             right=0
@@ -310,17 +322,18 @@ if __name__ == '__main__':
             R=0
             L=0
             N=0
-            origin_theta=0
-            origin_Y=0
+            O=0
+            origin_theta=-2
+            origin_Y=-300
             if send.is_start == True and aa == True:
                 send.sendBodyAuto(0,0,0,0,1,0)
                 while 1:
                     if Y==1 and O==1:#判斷是否有箭頭與是否要進入第二階段
                         if next_stage==0:
-                            # N, T, S=correct_slope(origin_theta,next_stage)
-                            # send.sendContinuousValue(S,origin_Y,0,T,0)
-                            # next_stage=N
-                            next_stage=1
+                            N, T, S=correct_slope(origin_theta,next_stage)
+                            send.sendContinuousValue(S,origin_Y,0,T,0)
+                            next_stage=N
+                            print(next_stage)
                         else:
                             Y, R, L, s, r, l=camera(yes, right, left, s, r, l)
                             yes=Y 
