@@ -16,8 +16,8 @@ def imu_right(flag, cnt,origin_theta,origin_Y):#90度右轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun right')
-    send.sendContinuousValue(900,origin_Y,0,-5+origin_theta,0)
-    if  yaw < -90:#成功右轉90度
+    send.sendContinuousValue(950,100,0,-3+origin_theta,0)
+    if  yaw < -87:#成功右轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -45,21 +45,21 @@ def imu_go(S, origin_theta,cnt):#直走4
     print("go go go!")
     yaw = send.imu_value_Yaw
     # print("go")
-    if 5 > yaw > 3:
+    if 5 > yaw > 2:
         S = 1300
-        T = -5+origin_theta
+        T = -2+origin_theta
     elif 7 > yaw > 5:
         S = 1100
-        T = -4+origin_theta
+        T = -3+origin_theta
     elif yaw > 7:
         S = 1000
-        T = -5
-    elif -5 < yaw < -3:
+        T = -5+origin_theta
+    elif -5 < yaw < -2:
         S = 1300
-        T = 2+origin_theta
+        T = 3+origin_theta
     elif yaw < -5:
         S = 1100
-        T = 3+origin_theta
+        T = 4+origin_theta
     else:
         S += 100
         T = 0+origin_theta
@@ -145,42 +145,42 @@ def theta(origin_theta):#判斷斜率
             speed = 1500
         #turn right
         elif -0.2 < s < -0.1:
-            theta = -3+origin_theta
+            theta = -1+origin_theta
             speed = 1400
         elif -0.4 < s < -0.2:
-            theta = -4+origin_theta
+            theta = -2+origin_theta
             speed = 1200
         elif -0.6 < s < -0.4:
-            theta = -5+origin_theta
+            theta = -3+origin_theta
             speed = 1000
         elif -1 < s < -0.6:
-            theta = -6+origin_theta
+            theta = -4+origin_theta
             speed = 800
         elif -100 < s < -1:
-            theta = -7+origin_theta
-            speed = 600
+            theta = -5+origin_theta
+            speed = 800
         elif s == -100:
-            theta = -9+origin_theta
-            speed = 200
+            theta = -7+origin_theta
+            speed = 500
         #turn left 
         elif 0.2 > s > 0.1:
-            theta = 2+origin_theta
+            theta = 1+origin_theta
             speed = 1400
         elif 0.4 > s > 0.2:
-            theta = 3+origin_theta
+            theta = 2+origin_theta
             speed = 1200
         elif 0.6 > s > 0.4:
-            theta = 4+origin_theta
+            theta = 3+origin_theta
             speed = 1000
         elif 1 > s > 0.6:
+            theta = 4+origin_theta
+            speed = 900
+        elif 100> s > 1:
             theta = 5+origin_theta
             speed = 800
-        elif 100> s > 1:
-            theta = 6+origin_theta
-            speed = 600
         elif s == 100:
-            theta = 8+origin_theta
-            speed = 200
+            theta = 7+origin_theta
+            speed = 500
     return theta, speed, out
 def calculate():#計算斜率
     cnt1=0
@@ -207,17 +207,17 @@ def calculate():#計算斜率
     for high in range(240):
         for wight in range(320):
             imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 30 < high < 100:
+            if 40 < high < 110:
                 if imgdata[wight][high] != 0:
                     total_x1+=wight
                     total_y1+=high
                     cnt1+=1
-            elif 100 < high < 170:
+            elif 110 < high < 180:
                 if imgdata[wight][high] != 0:
                     total_x2+=wight
                     total_y2+=high
                     cnt2+=1
-            elif high > 170:
+            elif high > 180:
                 if imgdata[wight][high] != 0:
                     total_x3+=wight
                     total_y3+=high
@@ -246,10 +246,10 @@ def calculate():#計算斜率
         elif center_x3 < 180:
             slope=100
     else:#計算斜率
-        if center_x3 < 80 and center_x2 < 80:
-                turn_left=1
-        elif center_x3 > 240 and center_x2 > 240:
-                turn_right=1
+        if center_x3 < 100 and center_x2 < 100:
+            turn_left=1
+        elif center_x3 > 220 and center_x2 > 220:
+            turn_right=1
         if center_x1==0 and center_y1==0:#first part don't have line
             slope = (center_x3-center_x2)/(center_y3-center_y2)
             send.drawImageFunction(2,0,c,e,d,f,0,0,0)
@@ -258,9 +258,9 @@ def calculate():#計算斜率
             slope = (center_x2-center_x1)/(center_y2-center_y1)
             send.drawImageFunction(2,0,a,c,b,d,0,0,0)
         else:
-            if center_x1 < 80 and center_x2 < 80:
+            if center_x1 < 100 and center_x2 < 100:
                 turn_left=1
-            elif center_x1 > 240 and center_x2 > 240:
+            elif center_x1 > 220 and center_x2 > 220:
                 turn_right=1
             slope = (center_x3-(center_x1+center_x2)/2)/(center_y3-(center_y1+center_y2)/2)
             h=int((center_x1+center_x2)/2)
@@ -323,8 +323,8 @@ if __name__ == '__main__':
             L=0
             N=0
             O=0
-            origin_theta=-2
-            origin_Y=-300
+            origin_theta=-1
+            origin_Y=0
             if send.is_start == True and aa == True:
                 send.sendBodyAuto(0,0,0,0,1,0)
                 while 1:
@@ -335,10 +335,11 @@ if __name__ == '__main__':
                             next_stage=N
                             print(next_stage)
                         else:
-                            Y, R, L, s, r, l=camera(yes, right, left, s, r, l)
                             yes=Y 
+                            Y, R, L, s, r, l=camera(yes, right, left, s, r, l)
                             right=R
                             left=L
+                            print(yes)
                             if R>=3:#多次成功判斷右轉
                                 flag_right, cnt=imu_right(flag,cnt,origin_theta,origin_Y)
                                 if flag_right==1:#完成90度右轉判斷旗標歸零
@@ -362,9 +363,10 @@ if __name__ == '__main__':
                                 send.sendContinuousValue(S,origin_Y,0,T,0)
                                 speed = S
                     else:
+                        yes=Y
                         T, S, O=theta(origin_theta)
                         Y, R, L, s, r, l = camera(yes, right, left, s, r, l)#判斷箭頭
-                        yes=Y 
+                        yes=Y
                         right=R
                         left=L
                         print(O)
