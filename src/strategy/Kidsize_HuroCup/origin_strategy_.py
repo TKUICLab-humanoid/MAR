@@ -30,41 +30,30 @@ def imu_left(flag,cnt,origin_theta,origin_Y):#90度左轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun left')
-    send.sendContinuousValue(900,origin_Y,0,6+origin_theta,0)
+    send.sendContinuousValue(900,origin_Y,0,7+origin_theta,0)
     if  yaw > 87:#成功左轉90度
         print("end")
         send.sendSensorReset()
         flag=1
         cnt=0
     return flag, cnt
-def imu_go(speed, origin_theta, cnt):#直走
+def imu_go(origin_theta, cnt):#直走
     if cnt==0:#第一次進入，Reset YAW值
         send.sendSensorReset()
         cnt=1
     theta=0
     print("go go go!")
     yaw = send.imu_value_Yaw
-    # print("go")
-    if 5 > yaw > 2:
-        speed = 1300
-        theta = -2+origin_theta
-    elif 7 > yaw > 5:
-        S = 1100
+    speed = 1300
+    if 7 > yaw > 3:
         theta = -3+origin_theta
-    elif yaw > 7:
-        speed = 1000
+    elif yaw >= 7:
         theta = -5+origin_theta
-    elif -5 < yaw < -2:
-        speed = 1300
+    elif -7 < yaw < -3:
         theta = 3+origin_theta
-    elif yaw < -5:
-        speed = 1100
-        theta = 4+origin_theta
-    else:
-        speed += 100
-        theta = 0+origin_theta
-    if speed > 1500:
-        speed = 1500
+    elif yaw <= -7:
+        speed = 1300
+        theta = 5+origin_theta
     return speed, theta, cnt
 def camera(straight_temp, right_temp, left_temp):#判斷箭頭
     #cap = cv2.VideoCapture(7)
@@ -265,17 +254,17 @@ def correct_slope_to_next_stage(origin_theta,next_stage_flag):
     slope , go_to_second_part_flag, correct_walking_right, correct_walking_left, big_turn_right, big_turn_left= calculate()
     theta = 0
     speed = 0
-    if -0.1 < slope < 0.1:
+    if -0.05 < slope < 0.05:
         theta = 0+origin_theta
-        next_stage_flag=1
+        next_stage_flag+=1
     #turn right
-    elif -0.4 < slope < -0.1:
+    elif -0.4 < slope < -0.05:
         theta = -3+origin_theta
     elif slope < -0.4:
         theta = -4+origin_theta
         speed = -100
     #turn left 
-    elif 0.4 > slope > 0.1:
+    elif 0.4 > slope > 0.05:
         theta = 3+origin_theta
     elif slope > 0.4:
         theta = 4+origin_theta
@@ -302,25 +291,25 @@ if __name__ == '__main__':
             turn_now_flag=0
 #----------------------------------------------------------------------
             #第二階段旗標
-            second_part_flag=0#成功判斷銀幕內有箭頭
-            next_stage_flag=0#修正完成
-            go_to_second_part_flag=0#線段只有在銀幕下方
+            second_part_flag=1#成功判斷銀幕內有箭頭
+            next_stage_flag=6#修正完成
+            go_to_second_part_flag=1#線段只有在銀幕下方
 #----------------------------------------------------------------------
             #步態初始化
             origin_theta = 0
-            origin_Y=-100
+            origin_Y=-200
             if send.is_start == True and start == True:
                 send.sendBodyAuto(0,0,0,0,1,0)
                 while 1:
                     if second_part_flag==1 and go_to_second_part_flag==1:#判斷是否有箭頭與是否要進入第二階段
-                        if next_stage_flag==0:
+                        if next_stage_flag<=5:
                             next_stage_flag, theta, speed=correct_slope_to_next_stage(origin_theta,next_stage_flag)
                             send.sendContinuousValue(speed,origin_Y,0,theta,0)
                         else:
                             straight_temp, right_temp, left_temp, arrow_center_y=camera(straight_temp, right_temp, left_temp)
                             second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
                             print(arrow_center_y)
-                            if arrow_center_y>=170:
+                            if arrow_center_y>=150:
                                 i+=1
                                 if i>=5:
                                     turn_now_flag=1
@@ -341,7 +330,7 @@ if __name__ == '__main__':
                                     finish_turn_left_flag=0
                                     turn_now_flag=0
                             else:#沒有任何判斷就直走
-                                speed, theta, cnt=imu_go(speed, origin_theta,cnt)
+                                speed, theta, cnt=imu_go(origin_theta,cnt)
                                 send.sendContinuousValue(speed,origin_Y,0,theta,0)
                                 turn_now_flag=0
                     else:
