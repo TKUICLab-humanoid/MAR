@@ -16,8 +16,8 @@ def imu_right(flag, cnt,origin_theta,origin_Y):#90度右轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun right')
-    send.sendContinuousValue(900,00,0,-6+origin_theta,0)
-    if  yaw < -87:#成功右轉90度
+    send.sendContinuousValue(900,origin_Y,0,-8+origin_theta,0)
+    if  yaw < -89:#成功右轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -31,7 +31,7 @@ def imu_left(flag,cnt,origin_theta,origin_Y):#90度左轉
     yaw = send.imu_value_Yaw
     print('trun left')
     send.sendContinuousValue(900,origin_Y,0,7+origin_theta,0)
-    if  yaw > 87:#成功左轉90度
+    if  yaw > 95:#成功左轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -41,19 +41,19 @@ def imu_go(origin_theta, cnt):#直走
     if cnt==0:#第一次進入，Reset YAW值
         send.sendSensorReset()
         cnt=1
-    theta=0
+    theta=origin_theta
     print("go go go!")
     yaw = send.imu_value_Yaw
     speed = 1300
     if 7 > yaw > 3:
-        theta = -3+origin_theta
+        theta = -4+origin_theta
     elif yaw >= 7:
-        theta = -5+origin_theta
+        theta = -6+origin_theta
     elif -7 < yaw < -3:
-        theta = 3+origin_theta
+        theta = 4+origin_theta
     elif yaw <= -7:
         speed = 1300
-        theta = 5+origin_theta
+        theta = 6+origin_theta
     return speed, theta, cnt
 def camera(straight_temp, right_temp, left_temp):#判斷箭頭
     #cap = cv2.VideoCapture(7)
@@ -106,8 +106,6 @@ def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_righ
         straight_temp=0
         print("go Straight")
         second_part_flag=1
-        turn_right_flag=0
-        turn_left_flag=0
     elif right_temp>=20:
         right_temp=0
         print("go Right")
@@ -291,13 +289,13 @@ if __name__ == '__main__':
             turn_now_flag=0
 #----------------------------------------------------------------------
             #第二階段旗標
-            second_part_flag=1#成功判斷銀幕內有箭頭
-            next_stage_flag=6#修正完成
-            go_to_second_part_flag=1#線段只有在銀幕下方
+            second_part_flag=0#成功判斷銀幕內有箭頭
+            next_stage_flag=0#修正完成
+            go_to_second_part_flag=0#線段只有在銀幕下方
 #----------------------------------------------------------------------
             #步態初始化
-            origin_theta = 0
-            origin_Y=-200
+            origin_theta = 2
+            origin_Y= -300
             if send.is_start == True and start == True:
                 send.sendBodyAuto(0,0,0,0,1,0)
                 while 1:
