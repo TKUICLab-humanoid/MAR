@@ -16,8 +16,8 @@ def imu_right(flag, cnt,origin_theta,origin_Y):#90度右轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun right')
-    send.sendContinuousValue(900,origin_Y,0,-7+origin_theta,0)
-    if  yaw < -89:#成功右轉90度
+    send.sendContinuousValue(800,origin_Y,0,-7+origin_theta,0)
+    if  yaw < -87:#成功右轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -30,8 +30,8 @@ def imu_left(flag,cnt,origin_theta,origin_Y):#90度左轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun left')
-    send.sendContinuousValue(900,origin_Y,0,8+origin_theta,0)
-    if  yaw > 85:#成功左轉90度
+    send.sendContinuousValue(800,origin_Y,0,7+origin_theta,0)
+    if  yaw > 87:#成功左轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -46,14 +46,14 @@ def imu_go(origin_theta, cnt):#直走
     yaw = send.imu_value_Yaw
     speed = 1300
     if 7 > yaw > 3:
-        theta = -4+origin_theta
+        theta = -1+origin_theta
     elif yaw >= 7:
-        theta = -6+origin_theta
+        theta = -2+origin_theta
     elif -7 < yaw < -3:
-        theta = 4+origin_theta
+        theta = 1+origin_theta
     elif yaw <= -7:
         speed = 1300
-        theta = 6+origin_theta
+        theta = 2+origin_theta
     return speed, theta, cnt
 def camera(straight_temp, right_temp, left_temp):#判斷箭頭
     #cap = cv2.VideoCapture(7)
@@ -106,6 +106,8 @@ def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_righ
         straight_temp=0
         print("go Straight")
         second_part_flag=1
+        turn_right_flag=0
+        turn_left_flag=0
     elif right_temp>=20:
         right_temp=0
         print("go Right")
@@ -288,8 +290,8 @@ if __name__ == '__main__':
             go_to_second_part_flag=1#線段只有在銀幕下方
 #----------------------------------------------------------------------
             #步態初始化
-            origin_theta = 1
-            origin_Y= -400
+            origin_theta =2
+            origin_Y= 0
             if send.is_start == True and start == True:
                 send.sendSensorReset()
                 send.sendBodyAuto(0,0,0,0,1,0)
