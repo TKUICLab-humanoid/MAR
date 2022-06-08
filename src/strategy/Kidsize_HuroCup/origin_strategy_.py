@@ -138,8 +138,8 @@ def theta_value(origin_theta):#判斷斜率
         theta = 8+origin_theta
         speed = 500
     else:
-        sp=[1500,1400,1400,1400,1400,1200,1200,1200,1200]
-        th=[0,2,2,2,2,4,4,4,4]
+        sp=[1500,1400,1400,1300,1300,1200,1200,1200,1200]
+        th=[0,2,2,3,3,4,4,4,4]
         #walk straight
         if slope >= 0.9:
             theta = 7+origin_theta
@@ -152,7 +152,7 @@ def theta_value(origin_theta):#判斷斜率
             speed = 800
         else:
             speed = int(sp[math.floor(-slope/0.1)])
-            theta = -int(th[math.floor(-slope/0.1)]+origin_theta)
+            theta = -int(th[math.floor(-slope/0.1)])+origin_theta
     return theta, speed, go_to_second_part_flag
 def calculate():#計算斜率
     cnt1=0
@@ -285,9 +285,9 @@ if __name__ == '__main__':
             turn_now_flag=0
 #----------------------------------------------------------------------
             #第二階段旗標
-            second_part_flag=1#成功判斷銀幕內有箭頭
-            next_stage_flag=1#修正完成
-            go_to_second_part_flag=1#線段只有在銀幕下方
+            second_part_flag=0#成功判斷銀幕內有箭頭
+            next_stage_flag=0#修正完成
+            go_to_second_part_flag=0#線段只有在銀幕下方
 #----------------------------------------------------------------------
             #步態初始化
             origin_theta =2
