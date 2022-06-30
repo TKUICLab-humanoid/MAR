@@ -285,9 +285,9 @@ if __name__ == '__main__':
             turn_now_flag=0
 #----------------------------------------------------------------------
             #第二階段旗標
-            second_part_flag=0#成功判斷銀幕內有箭頭
-            next_stage_flag=0#修正完成
-            go_to_second_part_flag=0#線段只有在銀幕下方
+            second_part_flag=1#成功判斷銀幕內有箭頭
+            next_stage_flag=1#修正完成
+            go_to_second_part_flag=1#線段只有在銀幕下方
 #----------------------------------------------------------------------
             #步態初始化
             origin_theta =2
