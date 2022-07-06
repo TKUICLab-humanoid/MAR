@@ -17,7 +17,7 @@ def imu_right(flag, cnt,origin_theta,origin_Y):#90度右轉
     yaw = send.imu_value_Yaw
     print('trun right')
     send.sendContinuousValue(800,origin_Y,0,-7+origin_theta,0)
-    if  yaw < -87:#成功右轉90度
+    if  yaw < -85:#成功右轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -281,9 +281,9 @@ def initial():
     turn_now_flag=0
 #----------------------------------------------------------------------
     #第二階段旗標
-    second_part_flag=0#成功判斷銀幕內有箭頭
-    next_stage_flag=0#修正完成
-    go_to_second_part_flag=0#線段只有在銀幕下方
+    second_part_flag=1#成功判斷銀幕內有箭頭
+    next_stage_flag=1#修正完成
+    go_to_second_part_flag=1#線段只有在銀幕下方
 #----------------------------------------------------------------------
     #步態初始化
     origin_theta=0
