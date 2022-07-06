@@ -347,7 +347,8 @@ if __name__ == '__main__':
                     initial()
                     send.sendBodyAuto(0,0,0,0,1,0)
                     start=True
-        r.sleep()
+            r.sleep()
+
                             
 
             
