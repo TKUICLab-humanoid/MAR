@@ -30,8 +30,8 @@ def imu_left(flag,cnt,origin_theta,origin_Y):#90度左轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun left')
-    send.sendContinuousValue(800,origin_Y,0,7+origin_theta,0)
-    if  yaw > 87:#成功左轉90度
+    send.sendContinuousValue(700,origin_Y,0,8+origin_theta,0)
+    if  yaw > 89:#成功左轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -139,7 +139,7 @@ def theta_value(origin_theta):#判斷斜率
         speed = 500
     else:
         sp=[1500,1400,1400,1300,1300,1200,1200,1200,1200]
-        th=[0,2,2,3,3,4,4,4,4]
+        th=[0,2,3,3,4,4,5,5,6]
         #walk straight
         if slope >= 0.9:
             theta = 7+origin_theta
@@ -266,36 +266,43 @@ def correct_slope_to_next_stage(origin_theta,next_stage_flag,i):
 
     return next_stage_flag, theta, speed, i
 
+def initial():
+    global i, cnt, speed, straight_temp, right_temp, left_temp, turn_left_flag, turn_now_flag, turn_right_flag, finish_turn_left_flag, finish_turn_right_flag, second_part_flag, next_stage_flag, go_to_second_part_flag, origin_theta, origin_Y
+    i=0
+    cnt=0#初始化直走左右轉90度yaw值計數
+    speed=0
+    straight_temp=0 #成功判斷箭頭暫存
+    right_temp=0 
+    left_temp=0 
+    turn_right_flag=0#成功判斷右轉
+    turn_left_flag=0#成功判斷左轉
+    finish_turn_left_flag=0#完成左轉
+    finish_turn_right_flag=0#完成右轉
+    turn_now_flag=0
+#----------------------------------------------------------------------
+    #第二階段旗標
+    second_part_flag=0#成功判斷銀幕內有箭頭
+    next_stage_flag=0#修正完成
+    go_to_second_part_flag=0#線段只有在銀幕下方
+#----------------------------------------------------------------------
+    #步態初始化
+    origin_theta=0
+    origin_Y=0
+
 if __name__ == '__main__':
     try:
         send = Sendmessage()
+        r=rospy.Rate(5)
         while not rospy.is_shutdown():
             send.sendHeadMotor(2,1500,50)
             send.sendHeadMotor(1,2048,50)
-            i=0
-            cnt=0#初始化直走左右轉90度yaw值計數
-            speed=0
-            straight_temp=0 #成功判斷箭頭暫存
-            right_temp=0 
-            left_temp=0 
-            turn_right_flag=0#成功判斷右轉
-            turn_left_flag=0#成功判斷左轉
-            finish_turn_left_flag=0#完成左轉
-            finish_turn_right_flag=0#完成右轉
-            turn_now_flag=0
-#----------------------------------------------------------------------
-            #第二階段旗標
-            second_part_flag=1#成功判斷銀幕內有箭頭
-            next_stage_flag=1#修正完成
-            go_to_second_part_flag=1#線段只有在銀幕下方
-#----------------------------------------------------------------------
-            #步態初始化
-            origin_theta =2
-            origin_Y= 0
-            if send.is_start == True and start == True:
-                send.sendSensorReset()
-                send.sendBodyAuto(0,0,0,0,1,0)
-                while 1:
+            if send.is_start == True:
+                if start == True:
+                    initial()
+                    send.sendSensorReset()
+                    send.sendBodyAuto(0,0,0,0,1,0)
+                    start=False
+                else:
                     if second_part_flag==1 and go_to_second_part_flag==1:#判斷是否有箭頭與是否要進入第二階段
                         if next_stage_flag==0:
                             next_stage_flag, theta, speed, i=correct_slope_to_next_stage(origin_theta,next_stage_flag,i)
@@ -304,7 +311,7 @@ if __name__ == '__main__':
                             straight_temp, right_temp, left_temp, arrow_center_y=camera(straight_temp, right_temp, left_temp)
                             second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
                             print(arrow_center_y)
-                            if arrow_center_y>=170:
+                            if arrow_center_y>=160:
                                 i+=1
                                 if i>=5:
                                     turn_now_flag=1
@@ -335,13 +342,14 @@ if __name__ == '__main__':
                         print(go_to_second_part_flag)
                         print(second_part_flag)
                         send.sendContinuousValue(speed,origin_Y,0,theta,0)
+            if send.is_start == False:
+                if start == False:
+                    initial()
+                    send.sendBodyAuto(0,0,0,0,1,0)
+                    start=True
+        r.sleep()
+                            
 
-                    if send.is_start == False:
-                        break
-                start = False
-            if send.is_start == False and start == False:
-                send.sendBodyAuto(0,0,0,0,1,0)
-                start = True
             
 
 
