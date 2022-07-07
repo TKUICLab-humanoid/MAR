@@ -121,14 +121,7 @@ class Sendmessage:
 
     def sendSensorReset(self):
         msg = SensorSet()
-        msg.Roll = 0
-        msg.Pitch = 0
-        msg.Yaw = 0
-        msg.DesireSet = False
-        msg.IMUReset = True
-        msg.ForceState = False
-        msg.GainSet = False
-        # msg.sensor_modeset = 0x02
+        msg.sensor_modeset = 0x02
         self.sensor_pub.publish(msg)
 
     def strategy(self):
