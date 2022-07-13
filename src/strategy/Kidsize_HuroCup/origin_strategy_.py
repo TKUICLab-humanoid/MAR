@@ -16,8 +16,8 @@ def imu_right(flag, cnt,origin_theta,origin_Y):#90度右轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun right')
-    send.sendContinuousValue(800,origin_Y,0,-7+origin_theta,0)
-    if  yaw < -85:#成功右轉90度
+    send.sendContinuousValue(800,origin_Y,0,-5+origin_theta,0)
+    if  yaw < -87:#成功右轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -102,19 +102,19 @@ def camera(straight_temp, right_temp, left_temp):#判斷箭頭
     return straight_temp, right_temp, left_temp, center_y
 
 def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag):
-    if straight_temp>=20:#成功連續判斷20次
+    if straight_temp>=15:#成功連續判斷20次
         straight_temp=0
         print("go Straight")
         second_part_flag=1
         turn_right_flag=0
         turn_left_flag=0
-    elif right_temp>=20:
+    elif right_temp>=10:
         right_temp=0
         print("go Right")
         second_part_flag=1
         turn_right_flag+=1
         turn_left_flag=0
-    elif left_temp>=20:
+    elif left_temp>=10:
         left_temp=0
         print("go Left")
         second_part_flag=1
@@ -138,7 +138,7 @@ def theta_value(origin_theta):#判斷斜率
         theta = 8+origin_theta
         speed = 500
     else:
-        sp=[1500,1400,1400,1300,1300,1200,1200,1200,1200]
+        sp=[2500,2400,2400,2300,2300,2200,2200,2200,2200]
         th=[0,2,3,3,4,4,5,5,6]
         #walk straight
         if slope >= 0.9:
@@ -248,7 +248,7 @@ def correct_slope_to_next_stage(origin_theta,next_stage_flag,i):
     if -0.05 < slope < 0.05:
         theta = 0+origin_theta
         i+=1
-        if i>=10:
+        if i>=5:
             next_stage_flag=1
             i=0
     #turn right
@@ -281,12 +281,12 @@ def initial():
     turn_now_flag=0
 #----------------------------------------------------------------------
     #第二階段旗標
-    second_part_flag=1#成功判斷銀幕內有箭頭
-    next_stage_flag=1#修正完成
-    go_to_second_part_flag=1#線段只有在銀幕下方
+    second_part_flag=0#成功判斷銀幕內有箭頭
+    next_stage_flag=0#修正完成
+    go_to_second_part_flag=0#線段只有在銀幕下方
 #----------------------------------------------------------------------
     #步態初始化
-    origin_theta=0
+    origin_theta=1
     origin_Y=0
 
 if __name__ == '__main__':
@@ -317,14 +317,14 @@ if __name__ == '__main__':
                                     turn_now_flag=1
                                     i=0
                             print(turn_now_flag)
-                            if turn_right_flag>=3 and turn_now_flag==1:#多次成功判斷右轉與判斷箭頭在銀幕下方
+                            if turn_right_flag>=2 and turn_now_flag==1:#多次成功判斷右轉與判斷箭頭在銀幕下方
                                 finish_turn_right_flag, cnt=imu_right(finish_turn_right_flag,cnt,origin_theta,origin_Y)
                                 if finish_turn_right_flag==1:#完成90度右轉判斷旗標歸零
                                     turn_right_flag=0
                                     cnt=0
                                     finish_turn_right_flag=0
                                     turn_now_flag=0
-                            elif turn_left_flag>=3 and turn_now_flag==1:#多次成功判斷左轉與判斷箭頭在銀幕下方
+                            elif turn_left_flag>=2 and turn_now_flag==1:#多次成功判斷左轉與判斷箭頭在銀幕下方
                                 finish_turn_left_flag, cnt=imu_left(finish_turn_left_flag,cnt,origin_theta,origin_Y)
                                 if finish_turn_left_flag==1:#完成90度左轉判斷旗標歸零
                                     turn_left_flag=0
