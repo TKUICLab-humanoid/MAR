@@ -16,7 +16,7 @@ def imu_right(flag, cnt,origin_theta,origin_Y):#90度右轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun right')
-    send.sendContinuousValue(800,origin_Y,0,-5+origin_theta,0)
+    send.sendContinuousValue(800,origin_Y,0,-6+origin_theta,0)
     if  yaw < -87:#成功右轉90度
         print("end")
         send.sendSensorReset()
@@ -31,7 +31,7 @@ def imu_left(flag,cnt,origin_theta,origin_Y):#90度左轉
     yaw = send.imu_value_Yaw
     print('trun left')
     send.sendContinuousValue(700,origin_Y,0,8+origin_theta,0)
-    if  yaw > 89:#成功左轉90度
+    if  yaw > 85:#成功左轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -44,20 +44,20 @@ def imu_go(origin_theta, cnt):#直走
     theta=origin_theta
     print("go go go!")
     yaw = send.imu_value_Yaw
-    speed = 1300
+    speed = 1800
     if 7 > yaw > 3:
-        theta = -1+origin_theta
-    elif yaw >= 7:
         theta = -2+origin_theta
+    elif yaw >= 7:
+        theta = -3+origin_theta
     elif -7 < yaw < -3:
-        theta = 1+origin_theta
+        theta = 3+origin_theta
     elif yaw <= -7:
-        speed = 1300
-        theta = 2+origin_theta
+        theta = 4+origin_theta
     return speed, theta, cnt
 def camera(straight_temp, right_temp, left_temp):#判斷箭頭
     #cap = cv2.VideoCapture(7)
     center_y=0
+    center_x=0
     STRAIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Straight.xml")
     RIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Right.xml")
     LEFT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Left.xml")
@@ -77,6 +77,7 @@ def camera(straight_temp, right_temp, left_temp):#判斷箭頭
         right_temp=0
         left_temp=0
         center_y=y+h/2 #計算箭頭的y軸位置
+        center_x=x+w/2
         # print("straight")
     elif len(RIGHT)>0:
         for a in RIGHT:  # 單獨框出每一張人臉
@@ -87,6 +88,7 @@ def camera(straight_temp, right_temp, left_temp):#判斷箭頭
         right_temp+=1
         left_temp=0
         center_y=y+h/2 #計算箭頭的y軸位置
+        center_x=x+w/2
         # print("right")
     elif len(LEFT)>0:
         for a in LEFT:  # 單獨框出每一張人臉
@@ -97,9 +99,10 @@ def camera(straight_temp, right_temp, left_temp):#判斷箭頭
         right_temp=0
         left_temp+=1
         center_y=y+h/2#計算箭頭的y軸位置
+        center_x=x+w/2
         # print("left")
     
-    return straight_temp, right_temp, left_temp, center_y
+    return straight_temp, right_temp, left_temp, center_y, center_x
 
 def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag):
     if straight_temp>=15:#成功連續判斷20次
@@ -127,29 +130,29 @@ def theta_value(origin_theta):#判斷斜率
     speed=0
     if correct_walking_right==1:
         theta = -6+origin_theta
-        speed = 1000
+        speed = 1900
     elif correct_walking_left==1:
         theta = 7+origin_theta
-        speed = 1000
+        speed = 1900
     elif big_turn_right==1:
         theta = -8+origin_theta
-        speed = 500
+        speed = 1000
     elif big_turn_left==1:
         theta = 8+origin_theta
-        speed = 500
+        speed = 1000
     else:
-        sp=[2500,2400,2400,2300,2300,2200,2200,2200,2200]
+        sp=[2500,2500,2400,2400,2300,2300,2200,2200,2100]
         th=[0,2,3,3,4,4,5,5,6]
         #walk straight
         if slope >= 0.9:
             theta = 7+origin_theta
-            speed = 800
+            speed = 1000
         elif slope>=0:
             speed = int(sp[math.floor(slope/0.1)])
             theta = int(th[math.floor(slope/0.1)])+origin_theta
         elif  slope <= -0.9:
             theta = -6+origin_theta
-            speed = 800
+            speed = 1000
         else:
             speed = int(sp[math.floor(-slope/0.1)])
             theta = -int(th[math.floor(-slope/0.1)])+origin_theta
@@ -238,7 +241,7 @@ def calculate():#計算斜率
             h=int((center_x1+center_x2)/2)
             i=int((center_y1+center_y2)/2)
             send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
-    print(slope)
+    #print(slope)
     return slope , go_to_second_part_flag , correct_walking_right, correct_walking_left, big_turn_right, big_turn_left
 
 def correct_slope_to_next_stage(origin_theta,next_stage_flag,i):
@@ -248,20 +251,20 @@ def correct_slope_to_next_stage(origin_theta,next_stage_flag,i):
     if -0.05 < slope < 0.05:
         theta = 0+origin_theta
         i+=1
-        if i>=5:
+        if i>=10:
             next_stage_flag=1
             i=0
     #turn right
     elif -0.4 < slope < -0.05:
-        theta = -3+origin_theta
-    elif slope < -0.4:
         theta = -4+origin_theta
+    elif slope < -0.4:
+        theta = -5+origin_theta
         speed = -100
     #turn left 
     elif 0.4 > slope > 0.05:
-        theta = 3+origin_theta
+        theta = 5+origin_theta
     elif slope > 0.4:
-        theta = 4+origin_theta
+        theta = 6+origin_theta
         speed = -100
 
     return next_stage_flag, theta, speed, i
@@ -279,14 +282,15 @@ def initial():
     finish_turn_left_flag=0#完成左轉
     finish_turn_right_flag=0#完成右轉
     turn_now_flag=0
+    correct_y=0
 #----------------------------------------------------------------------
     #第二階段旗標
-    second_part_flag=0#成功判斷銀幕內有箭頭
-    next_stage_flag=0#修正完成
-    go_to_second_part_flag=0#線段只有在銀幕下方
+    second_part_flag=1#成功判斷銀幕內有箭頭
+    next_stage_flag=1#修正完成
+    go_to_second_part_flag=1#線段只有在銀幕下方
 #----------------------------------------------------------------------
     #步態初始化
-    origin_theta=1
+    origin_theta=0
     origin_Y=0
 
 if __name__ == '__main__':
@@ -294,7 +298,7 @@ if __name__ == '__main__':
         send = Sendmessage()
         r=rospy.Rate(5)
         while not rospy.is_shutdown():
-            send.sendHeadMotor(2,1500,50)
+            send.sendHeadMotor(2,1700,50)
             send.sendHeadMotor(1,2048,50)
             if send.is_start == True:
                 if start == True:
@@ -308,18 +312,27 @@ if __name__ == '__main__':
                             next_stage_flag, theta, speed, i=correct_slope_to_next_stage(origin_theta,next_stage_flag,i)
                             send.sendContinuousValue(speed,origin_Y,0,theta,0)
                         else:
-                            straight_temp, right_temp, left_temp, arrow_center_y=camera(straight_temp, right_temp, left_temp)
+                            straight_temp, right_temp, left_temp, arrow_center_y, arrow_center_x=camera(straight_temp, right_temp, left_temp)
                             second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
-                            print(arrow_center_y)
-                            if arrow_center_y>=160:
+                            print('Y:', arrow_center_y)
+                            print('X:', arrow_center_x)
+                            if arrow_center_y>=170:
+                                speed=1000
                                 i+=1
                                 if i>=5:
                                     turn_now_flag=1
                                     i=0
-                            print(turn_now_flag)
+                            if arrow_center_x>=170:
+                                correct_y=-6
+                            elif 0 < arrow_center_x <=150:
+                                correct_y=7
+                            else:
+                                correct_y=0
+                            #print(turn_now_flag)
                             if turn_right_flag>=2 and turn_now_flag==1:#多次成功判斷右轉與判斷箭頭在銀幕下方
                                 finish_turn_right_flag, cnt=imu_right(finish_turn_right_flag,cnt,origin_theta,origin_Y)
                                 if finish_turn_right_flag==1:#完成90度右轉判斷旗標歸零
+                                    send.sendHeadMotor(2,1700,50)
                                     turn_right_flag=0
                                     cnt=0
                                     finish_turn_right_flag=0
@@ -327,20 +340,26 @@ if __name__ == '__main__':
                             elif turn_left_flag>=2 and turn_now_flag==1:#多次成功判斷左轉與判斷箭頭在銀幕下方
                                 finish_turn_left_flag, cnt=imu_left(finish_turn_left_flag,cnt,origin_theta,origin_Y)
                                 if finish_turn_left_flag==1:#完成90度左轉判斷旗標歸零
+                                    send.sendHeadMotor(2,1700,50)
                                     turn_left_flag=0
                                     cnt=0
                                     finish_turn_left_flag=0
                                     turn_now_flag=0
                             else:#沒有任何判斷就直走
                                 speed, theta, cnt=imu_go(origin_theta,cnt)
-                                send.sendContinuousValue(speed,origin_Y,0,theta,0)
-                                turn_now_flag=0
+                                send.sendContinuousValue(speed,origin_Y,0,theta+correct_y,0)
+                                if turn_now_flag == 1:
+                                    send.sendHeadMotor(2,1700,50)
+                                    turn_now_flag=0
+                                
                     else:
                         theta, speed, go_to_second_part_flag=theta_value(origin_theta)
-                        straight_temp, right_temp, left_temp, arrow_center_y=camera(straight_temp, right_temp, left_temp)#判斷是否有箭頭
+                        straight_temp, right_temp, left_temp, arrow_center_y, arrow_center_x=camera(straight_temp, right_temp, left_temp)#判斷是否有箭頭
                         second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
-                        print(go_to_second_part_flag)
-                        print(second_part_flag)
+                        print('line in camera bottom : ', go_to_second_part_flag)
+                        print('arrow ok : ', second_part_flag)
+                        if second_part_flag == 1:
+                            speed=1000
                         send.sendContinuousValue(speed,origin_Y,0,theta,0)
             if send.is_start == False:
                 if start == False:
