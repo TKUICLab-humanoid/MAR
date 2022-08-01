@@ -18,7 +18,6 @@ def imu_right(flag,origin_theta,origin_Y):#90度右轉
         print("end")
         send.sendSensorReset()
         flag=1
-        cnt=0
     return flag
 def imu_left(flag,origin_theta,origin_Y):#90度左轉
     flag=0
@@ -29,7 +28,6 @@ def imu_left(flag,origin_theta,origin_Y):#90度左轉
         print("end")
         send.sendSensorReset()
         flag=1
-        cnt=0
     return flag
 def imu_go(origin_thet,arrow_center_x):#直走
     theta=origin_theta
@@ -201,17 +199,17 @@ def calculate():#計算斜率
     for high in range(240):
         for wight in range(320):
             imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 40 < high < 110:
+            if 40 <= high < 110:
                 if imgdata[wight][high] != 0:
                     total_x1+=wight
                     total_y1+=high
                     cnt1+=1
-            elif 110 < high < 180:
+            elif 110 <= high < 180:
                 if imgdata[wight][high] != 0:
                     total_x2+=wight
                     total_y2+=high
                     cnt2+=1
-            elif high > 180:
+            elif high >= 180:
                 if imgdata[wight][high] != 0:
                     total_x3+=wight
                     total_y3+=high
@@ -240,9 +238,9 @@ def calculate():#計算斜率
         elif center_x3 < 180:
             big_turn_left=1
     else:#計算斜率
-        if center_x3 < 100 and center_x2 < 100:
+        if center_x3 < 80 and center_x2 < 80:
             correct_walking_left=1
-        elif center_x3 > 220 and center_x2 > 220:
+        elif center_x3 > 240 and center_x2 > 240:
             correct_walking_right=1
         if center_x1==0 and center_y1==0:#first part don't have line
             slope = (center_x3-center_x2)/(center_y3-center_y2)
@@ -252,10 +250,6 @@ def calculate():#計算斜率
             slope = (center_x2-center_x1)/(center_y2-center_y1)
             send.drawImageFunction(2,0,center_x1,center_x2,center_y1,center_y2,0,0,0)
         else:
-            if center_x1 < 100 and center_x2 < 100:
-                correct_walking_left=1
-            elif center_x1 > 220 and center_x2 > 220:
-                correct_walking_right=1
             slope = (center_x3-(center_x1+center_x2)/2)/(center_y3-(center_y1+center_y2)/2)
             h=int((center_x1+center_x2)/2)
             i=int((center_y1+center_y2)/2)
