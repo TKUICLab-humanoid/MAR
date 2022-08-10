@@ -9,13 +9,35 @@ import cv2
 import math
 imgdata = [[None for high in range(240)]for wight in range(320)]
 start = True
+def initial():
+    global i, cnt, speed, straight_temp, right_temp, left_temp, turn_left_flag, turn_now_flag, turn_right_flag, finish_turn_left_flag, finish_turn_right_flag, second_part_flag, next_stage_flag, go_to_second_part_flag, origin_theta, origin_Y
+    i=0
+    speed=0
+    straight_temp=0 #成功判斷箭頭暫存
+    right_temp=0 
+    left_temp=0 
+    turn_right_flag=0#成功判斷右轉
+    turn_left_flag=0#成功判斷左轉
+    finish_turn_left_flag=0#完成左轉
+    finish_turn_right_flag=0#完成右轉
+    turn_now_flag=0
+#----------------------------------------------------------------------
+    #第二階段旗標
+    second_part_flag=0 #成功判斷銀幕內有箭頭
+    go_to_second_part_flag=0#線段只有在銀幕下方
+    next_stage_flag=0 #修正是否正對箭頭
+#----------------------------------------------------------------------
+    #步態初始化
+    origin_theta=1
+    origin_Y=0
+
 def imu_right(flag,origin_theta,origin_Y):#90度右轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun right')
-    send.sendContinuousValue(800,origin_Y,0,-7+origin_theta,0)
+    send.sendContinuousValue(1200,origin_Y,0,-7+origin_theta,0)
     send.sendHeadMotor(2,1400,50)
-    if  yaw < -86:#成功右轉90度
+    if  yaw < -83:#成功右轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -24,9 +46,9 @@ def imu_left(flag,origin_theta,origin_Y):#90度左轉
     flag=0
     yaw = send.imu_value_Yaw
     print('trun left')
-    send.sendContinuousValue(800,origin_Y,0,8+origin_theta,0)
+    send.sendContinuousValue(1200,origin_Y,0,7+origin_theta,0)
     send.sendHeadMotor(2,1400,50)
-    if  yaw > 85:#成功左轉90度
+    if  yaw > 83:#成功左轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -105,11 +127,11 @@ def correct_go_to_arrow(origin_theta,i):
     theta = 0
     speed = 0
     print('slope:', slope)
-    if -0.15 < slope < 0.05:
+    if -0.05 < slope < 0.05:
         theta = 0+origin_theta
         i+=1
     #turn right
-    elif -0.4 < slope < -0.15:
+    elif -0.4 < slope < -0.05:
         theta = -4+origin_theta
     elif slope < -0.4:
         theta = -5+origin_theta
@@ -149,29 +171,29 @@ def theta_value(origin_theta):#判斷斜率
     speed=0
     if correct_walking_right==1:
         theta = -8+origin_theta
-        speed = 1200
+        speed = 1500
     elif correct_walking_left==1:
         theta = 7+origin_theta
         speed = 1500
     elif big_turn_right==1:
         theta = -9+origin_theta
-        speed = 1000
+        speed = 1200
     elif big_turn_left==1:
         theta = 8+origin_theta
-        speed = 1000
+        speed = 1200
     else:
         sp=[2500,2500,2400,2400,2300,2300,2200,2200,2100]
         th=[0,2,3,4,4,5,6,6,7]
         #walk straight
         if slope >= 0.9:
             theta = 7+origin_theta
-            speed = 1000
+            speed = 1500
         elif slope>=0:
             speed = int(sp[math.floor(slope/0.1)])
             theta = int(th[math.floor(slope/0.1)])+origin_theta
         elif  slope <= -0.9:
             theta = -7+origin_theta
-            speed = 1000
+            speed = 1500
         else:
             speed = int(sp[math.floor(-slope/0.1)])
             theta = -int(th[math.floor(-slope/0.1)])+origin_theta
@@ -258,28 +280,6 @@ def calculate():#計算斜率
             send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
     #print(slope)
     return slope , go_to_second_part_flag , correct_walking_right, correct_walking_left, big_turn_right, big_turn_left
-def initial():
-    global i, cnt, speed, straight_temp, right_temp, left_temp, turn_left_flag, turn_now_flag, turn_right_flag, finish_turn_left_flag, finish_turn_right_flag, second_part_flag, next_stage_flag, go_to_second_part_flag, origin_theta, origin_Y
-    i=0
-    cnt=0#初始化直走左右轉90度yaw值計數
-    speed=0
-    straight_temp=0 #成功判斷箭頭暫存
-    right_temp=0 
-    left_temp=0 
-    turn_right_flag=0#成功判斷右轉
-    turn_left_flag=0#成功判斷左轉
-    finish_turn_left_flag=0#完成左轉
-    finish_turn_right_flag=0#完成右轉
-    turn_now_flag=0
-#----------------------------------------------------------------------
-    #第二階段旗標
-    second_part_flag=0 #成功判斷銀幕內有箭頭
-    go_to_second_part_flag=0#線段只有在銀幕下方
-    next_stage_flag=0 #修正是否正對箭頭
-#----------------------------------------------------------------------
-    #步態初始化
-    origin_theta=1
-    origin_Y=0
 
 if __name__ == '__main__':
     try:
@@ -304,19 +304,21 @@ if __name__ == '__main__':
                         print('Y:', arrow_center_y)
                         print('X:', arrow_center_x)
                         if next_stage_flag==0:
+                            send.sendHeadMotor(2,1400,50)
                             theta, speed, i=correct_go_to_arrow(origin_theta,i)
                             if i>=5:
                                 next_stage_flag=1
                                 send.sendSensorReset()
                                 i=0
-                                time.sleep(0.5)
+                                send.sendHeadMotor(2,1600,50)
+                                time.sleep(0.2)
                             print('next flag:', next_stage_flag)
                             send.sendContinuousValue(speed,origin_Y,0,theta,0)
                         else:
                             if arrow_center_y>=170:
                                 speed=1000
                                 i+=1
-                                if i>=3:
+                                if i>=5:
                                     turn_now_flag=1
                                     i=0
                             #print(turn_now_flag)
@@ -324,9 +326,8 @@ if __name__ == '__main__':
                                 finish_turn_right_flag=imu_right(finish_turn_right_flag,origin_theta,origin_Y)
                                 if finish_turn_right_flag==1:#完成90度右轉判斷旗標歸零
                                     send.sendHeadMotor(2,1600,50)
-                                    time.sleep(0.5)
+                                    time.sleep(0.2)
                                     turn_right_flag=0
-                                    cnt=0
                                     finish_turn_right_flag=0
                                     turn_now_flag=0
 
@@ -335,9 +336,8 @@ if __name__ == '__main__':
                                 finish_turn_left_flag=imu_left(finish_turn_left_flag,origin_theta,origin_Y)
                                 if finish_turn_left_flag==1:#完成90度左轉判斷旗標歸零
                                     send.sendHeadMotor(2,1600,50)
-                                    time.sleep(0.5)
+                                    time.sleep(0.2)
                                     turn_left_flag=0
-                                    cnt=0
                                     finish_turn_left_flag=0
                                     turn_now_flag=0
                             else:#沒有任何判斷就直走
