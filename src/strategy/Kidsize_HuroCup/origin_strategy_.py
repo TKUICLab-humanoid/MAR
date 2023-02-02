@@ -289,7 +289,7 @@ if __name__ == '__main__':
             if send.is_start == True:
                 if start == True:
                     initial()
-                    send.sendHeadMotor(2,1600,50)
+                    send.sendHeadMotor(2,1300,50)
                     time.sleep(0.5)
                     send.sendHeadMotor(1,2048,50)
                     time.sleep(0.5)
