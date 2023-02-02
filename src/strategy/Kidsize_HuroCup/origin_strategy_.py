@@ -28,7 +28,7 @@ def initial():
     next_stage_flag=0 #修正是否正對箭頭
 #----------------------------------------------------------------------
     #步態初始化
-    origin_theta=1
+    origin_theta=0
     origin_Y=0
 
 def imu_right(flag,origin_theta,origin_Y):#90度右轉
@@ -278,14 +278,14 @@ def calculate():#計算斜率
             h=int((center_x1+center_x2)/2)
             i=int((center_y1+center_y2)/2)
             send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
-    #print(slope)
+    print('slop=====',slope)
     return slope , go_to_second_part_flag , correct_walking_right, correct_walking_left, big_turn_right, big_turn_left
 
 if __name__ == '__main__':
     try:
         send = Sendmessage()
         r=rospy.Rate(5)
-        while not rospy.is_shutdown():
+        while not rospy.is_shutdown():            
             if send.is_start == True:
                 if start == True:
                     initial()
@@ -353,6 +353,7 @@ if __name__ == '__main__':
                         second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
                         print('line in camera bottom : ', go_to_second_part_flag)
                         print('arrow ok : ', second_part_flag)
+                        print('theta=====',theta)
                         if second_part_flag==1:
                             speed=1000
                         send.sendContinuousValue(speed,origin_Y,0,theta,0)
