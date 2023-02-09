@@ -28,7 +28,7 @@ def initial():
     next_stage_flag=0 #修正是否正對箭頭
 #----------------------------------------------------------------------
     #步態初始化
-    origin_theta=0
+    origin_theta=1
     origin_Y=0
 
 def imu_right(flag,origin_theta,origin_Y):#90度右轉
@@ -72,7 +72,7 @@ def imu_go(origin_theta,arrow_center_x):#直走
             theta = 2+origin_theta
             print('left')
     return speed, theta
-def camera(straight_temp, right_temp, left_temp):#判斷箭頭
+def camera(straight_temp, right_temp, left_temp):#判斷箭頭  #要改！
     #cap = cv2.VideoCapture(7)
     center_y=0
     center_x=0
@@ -152,7 +152,7 @@ def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_righ
         second_part_flag=1
         turn_right_flag=0
         turn_left_flag=0
-    elif right_temp>=10:
+    elif right_temp>=5:
         right_temp=0
         print("go Right")
         second_part_flag=1
@@ -170,30 +170,30 @@ def theta_value(origin_theta):#判斷斜率
     theta=0
     speed=0
     if correct_walking_right==1:
-        theta = -8+origin_theta
-        speed = 1500
+        theta = -7+origin_theta
+        speed = 2000
     elif correct_walking_left==1:
-        theta = 7+origin_theta
-        speed = 1500
+        theta = 6+origin_theta
+        speed = 2000
     elif big_turn_right==1:
         theta = -9+origin_theta
-        speed = 1200
+        speed = 1500
     elif big_turn_left==1:
         theta = 8+origin_theta
-        speed = 1200
+        speed = 1500
     else:
-        sp=[2500,2500,2400,2400,2300,2300,2200,2200,2100]
-        th=[0,2,3,4,4,5,6,6,7]
+        sp=[4800,4800,4500,4500,4500,4500,4200,4200,4200]
+        th=[0,0,1,1,1,1,2,2,2]
         #walk straight
         if slope >= 0.9:
-            theta = 7+origin_theta
-            speed = 1500
+            theta = 2+origin_theta
+            speed = 4000
         elif slope>=0:
             speed = int(sp[math.floor(slope/0.1)])
             theta = int(th[math.floor(slope/0.1)])+origin_theta
         elif  slope <= -0.9:
-            theta = -7+origin_theta
-            speed = 1500
+            theta = -2+origin_theta
+            speed = 4000
         else:
             speed = int(sp[math.floor(-slope/0.1)])
             theta = -int(th[math.floor(-slope/0.1)])+origin_theta
@@ -278,18 +278,18 @@ def calculate():#計算斜率
             h=int((center_x1+center_x2)/2)
             i=int((center_y1+center_y2)/2)
             send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
-    print('slop=====',slope)
+    #print(slope)
     return slope , go_to_second_part_flag , correct_walking_right, correct_walking_left, big_turn_right, big_turn_left
 
 if __name__ == '__main__':
     try:
         send = Sendmessage()
         r=rospy.Rate(5)
-        while not rospy.is_shutdown():            
+        while not rospy.is_shutdown():
             if send.is_start == True:
                 if start == True:
                     initial()
-                    send.sendHeadMotor(2,1300,50)
+                    send.sendHeadMotor(2,1600,50)
                     time.sleep(0.5)
                     send.sendHeadMotor(1,2048,50)
                     time.sleep(0.5)
@@ -322,7 +322,7 @@ if __name__ == '__main__':
                                     turn_now_flag=1
                                     i=0
                             #print(turn_now_flag)
-                            if turn_right_flag>=2 and turn_now_flag==1:#多次成功判斷右轉與判斷箭頭在銀幕下方
+                            if turn_right_flag>=1 and turn_now_flag==1:#多次成功判斷右轉與判斷箭頭在銀幕下方
                                 finish_turn_right_flag=imu_right(finish_turn_right_flag,origin_theta,origin_Y)
                                 if finish_turn_right_flag==1:#完成90度右轉判斷旗標歸零
                                     send.sendHeadMotor(2,1600,50)
@@ -353,7 +353,7 @@ if __name__ == '__main__':
                         second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
                         print('line in camera bottom : ', go_to_second_part_flag)
                         print('arrow ok : ', second_part_flag)
-                        print('theta=====',theta)
+                        print(send.imu_value_Yaw)
                         if second_part_flag==1:
                             speed=1000
                         send.sendContinuousValue(speed,origin_Y,0,theta,0)
