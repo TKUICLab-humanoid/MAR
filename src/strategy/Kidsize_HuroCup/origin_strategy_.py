@@ -28,7 +28,7 @@ def initial():
     next_stage_flag=0 #修正是否正對箭頭
 #----------------------------------------------------------------------
     #步態初始化
-    origin_theta=1
+    origin_theta=0
     origin_Y=0
 
 def imu_right(flag,origin_theta,origin_Y):#90度右轉
@@ -170,20 +170,20 @@ def theta_value(origin_theta):#判斷斜率
     theta=0
     speed=0
     if correct_walking_right==1:
-        theta = -5+origin_theta
+        theta = -6+origin_theta
         speed = 3200
     elif correct_walking_left==1:
         theta = 5+origin_theta
         speed = 3100
     elif big_turn_right==1:
-        theta = -6+origin_theta
+        theta = -7+origin_theta
         speed = 3200
     elif big_turn_left==1:
         theta = 6+origin_theta
         speed = 3100
     else:
-        sp=[3400,3400,3300,3300,3300,3300,3200,3200,3200]
-        th=[0,1,1,2,3,3,4,4,5]
+        sp=[3500,3400,3300,3300,3300,3300,3200,3200,3200]
+        th=[0,1,2,3,4,4,4,5,5]
         #walk straight
         if slope >= 0.9:
             theta = 5+origin_theta
@@ -220,20 +220,21 @@ def calculate():#計算斜率
     correct_walking_right=0
     big_turn_right=0
     big_turn_left=0
+    print('=====',center_x1)
     for high in range(240):
         for wight in range(320):
             imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 0 <= high < 80:
+            if 1 <= high < 110:
                 if imgdata[wight][high] != 0:
                     total_x1+=wight
                     total_y1+=high
                     cnt1+=1
-            elif 80 <= high < 160:
+            elif 110 <= high < 180:
                 if imgdata[wight][high] != 0:
                     total_x2+=wight
                     total_y2+=high
                     cnt2+=1
-            elif high >= 160:
+            elif high >= 180:
                 if imgdata[wight][high] != 0:
                     total_x3+=wight
                     total_y3+=high
@@ -262,7 +263,7 @@ def calculate():#計算斜率
         elif center_x3 < 80:
             big_turn_left=1
     else:#計算斜率
-        if center_x3 < 130 and center_x2 < 130:
+        if center_x3 < 120 and center_x2 < 120:
             correct_walking_left=1
             print('000000000')
         elif center_x3 > 220 and center_x2 > 220:
@@ -280,7 +281,7 @@ def calculate():#計算斜率
             h=int((center_x1+center_x2)/2)
             i=int((center_y1+center_y2)/2)
             send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
-    #print(slope)
+    print(slope)
     return slope , go_to_second_part_flag , correct_walking_right, correct_walking_left, big_turn_right, big_turn_left
 
 if __name__ == '__main__':
@@ -353,9 +354,9 @@ if __name__ == '__main__':
                         theta, speed, go_to_second_part_flag=theta_value(origin_theta)
                         # straight_temp, right_temp, left_temp, arrow_center_y, arrow_center_x=camera(straight_temp, right_temp, left_temp)#判斷是否有箭頭
                         # second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
-                        print('line in camera bottom : ', go_to_second_part_flag)
-                        print('arrow ok : ', second_part_flag)
-                        print(send.imu_value_Yaw)
+                        # print('line in camera bottom : ', go_to_second_part_flag)
+                        # print('arrow ok : ', second_part_flag)
+                        #print(send.imu_value_Yaw)
                         # if second_part_flag==1:
                         #     speed=1000
                         send.sendContinuousValue(speed,origin_Y,0,theta,0)
