@@ -223,21 +223,24 @@ def calculate():#計算斜率
     for high in range(240):
         for wight in range(320):
             imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 40 <= high < 110:
+            if 40 <= high < 70:
                 if imgdata[wight][high] != 0:
                     total_x1+=wight
                     total_y1+=high
                     cnt1+=1
-            elif 110 <= high < 180:
+            elif 70 <= high < 210:
                 if imgdata[wight][high] != 0:
                     total_x2+=wight
                     total_y2+=high
                     cnt2+=1
-            elif high >= 180:
+            elif high >=210 :
                 if imgdata[wight][high] != 0:
                     total_x3+=wight
                     total_y3+=high
                     cnt3+=1
+    send.drawImageFunction(3, 0, 0, 320, 40, 40, 138, 43, 226)
+    send.drawImageFunction(4, 0, 0, 320, 70, 70, 138, 43, 226)
+    send.drawImageFunction(5, 0, 0, 320, 210, 210, 138, 43, 226)
     if cnt1 > 50:#去除雜訊點
         center_x1=total_x1/cnt1
         center_y1=total_y1/cnt1
@@ -351,8 +354,11 @@ if __name__ == '__main__':
                         theta, speed, go_to_second_part_flag=theta_value(origin_theta)
                         straight_temp, right_temp, left_temp, arrow_center_y, arrow_center_x=camera(straight_temp, right_temp, left_temp)#判斷是否有箭頭
                         second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
-                        print('line in camera bottom : ', go_to_second_part_flag)
-                        print('arrow ok : ', second_part_flag)
+                        #print('line in camera bottom : ', go_to_second_part_flag)
+                        #print('arrow ok : ', second_part_flag)
+                        print('角度：', theta)
+                        print('速度：', speed)
+                        time.sleep(0.1)
                         send.sendContinuousValue(speed,origin_Y,0,theta,0)
             if send.is_start == False:
                 if start == False:
