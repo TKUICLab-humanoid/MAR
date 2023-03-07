@@ -82,28 +82,28 @@ imgdata = [[None for high in range(240)]for wight in range(320)]
 def imu_right():#90度右轉
     MAR.finish_turn_flag = False
     yaw = send.imu_value_Yaw
-    print('turn right')
-    send.sendContinuousValue(2000,0,0,-7+MAR.origin_theta,0)
+    print('箭頭：右轉')
+    send.sendContinuousValue(2200,0,0,-5+MAR.origin_theta,0)
     send.sendHeadMotor(2,1400,50)
     if  yaw < -83:#成功右轉90度
-        print("end")
+        print("箭頭右轉結束")
         send.sendSensorReset()
         MAR.finish_turn_flag = True
 
 def imu_left():#90度左轉
     MAR.finish_turn_flag = False
     yaw = send.imu_value_Yaw
-    print('turn left')
-    send.sendContinuousValue(2000,0,0,7+MAR.origin_theta,0)
+    print('箭頭：左轉')
+    send.sendContinuousValue(2300,0,0,5+MAR.origin_theta,0)
     send.sendHeadMotor(2,1400,50)
     if  yaw > 78:#成功左轉90度
-        print("end")
+        print("箭頭左轉結束")
         send.sendSensorReset()
         MAR.finish_turn_flag = True
 
 def imu_go():#直走
     MAR.theta = MAR.origin_theta+1
-    print("go go go!")
+    print("直走")
     yaw = send.imu_value_Yaw
     MAR.speed = 2000
     if 0<MAR.arrow_center[0]<=140:
@@ -115,10 +115,10 @@ def imu_go():#直走
     else:
         if  yaw > 3:
             MAR.theta = -3+MAR.origin_theta
-            print('right')
+            print('修正：右轉')
         elif yaw < -3:
             MAR.theta = 2+MAR.origin_theta
-            print('left')
+            print('修正：左轉')
 
 def camera():#判斷箭頭
     #cap = cv2.VideoCapture(7)
@@ -220,30 +220,30 @@ def arrow_flag():
 
 def theta_value():#判斷斜率
     if MAR.walk_line == 'line_at_right':
-        MAR.theta = -5+MAR.origin_theta
-        MAR.speed = 3200
+        MAR.theta = -4+MAR.origin_theta
+        MAR.speed = 3000
     elif MAR.walk_line == 'line_at_left':
         MAR.theta = 4+MAR.origin_theta
-        MAR.speed = 3100
+        MAR.speed = 3000
     elif MAR.walk_line == 'big_turn_right':
-        MAR.theta = -7+MAR.origin_theta
-        MAR.speed = 3200
+        MAR.theta = -5+MAR.origin_theta
+        MAR.speed = 3000
     elif MAR.walk_line == 'big_turn_left':
-        MAR.theta = 6+MAR.origin_theta
-        MAR.speed = 3100
+        MAR.theta = 5+MAR.origin_theta
+        MAR.speed = 3000
     else:
-        sp=[3500,3400,3300,3300,3300,3300,3200,3200,3200]
-        th=[0,1,2,3,4,4,4,5,5]
+        sp=[3500,3400,3300,3300,3200,3200,3100,3100,3100]
+        th=[0,0,1,1,2,2,3,3,3]
         #walk straight
         if MAR.slope >= 0.9:
             MAR.theta = 5+MAR.origin_theta
-            MAR.speed = 3100
+            MAR.speed = 3000
         elif MAR.slope>=0:
             MAR.speed = int(sp[math.floor(MAR.slope/0.1)])
             MAR.theta = int(th[math.floor(MAR.slope/0.1)])+MAR.origin_theta
         elif  MAR.slope <= -0.9:
             MAR.theta = -5+MAR.origin_theta
-            MAR.speed = 3100
+            MAR.speed = 3000
         else:
             MAR.speed = int(sp[math.floor(-MAR.slope/0.1)])
             MAR.theta = -int(th[math.floor(-MAR.slope/0.1)])+MAR.origin_theta
@@ -267,12 +267,12 @@ def calculate():#計算斜率
     for high in range(240):
         for wight in range(320):
             imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 1 <= high < 110:
+            if 1 <= high < 100:
                 if imgdata[wight][high] != 0:
                     total_x1+=wight
                     total_y1+=high
                     cnt1+=1
-            elif 110 <= high < 180:
+            elif 100 <= high < 180:
                 if imgdata[wight][high] != 0:
                     total_x2+=wight
                     total_y2+=high
@@ -310,18 +310,20 @@ def calculate():#計算斜率
             MAR.walk_line = 'line_at_left'
         elif center_x3 > 210 and center_x2 > 210:
             MAR.walk_line = 'line_at_right'
-        if center_x1==0 and center_y1==0:#first part don't have line
+        elif center_x1==0 and center_y1==0:#first part don't have line
             MAR.slope = (center_x3-center_x2)/(center_y3-center_y2)
             send.drawImageFunction(2,0,center_x2,center_x3,center_y2,center_y3,0,0,0)
             MAR.walk_line='arrow'#進入第二階段的指標，線在機器人螢幕的正下方
         elif center_x3==0 and center_y3==0:
             MAR.slope = (center_x2-center_x1)/(center_y2-center_y1)
             send.drawImageFunction(2,0,center_x1,center_x2,center_y1,center_y2,0,0,0)
+            MAR.walk_line='online'
         else:
             MAR.slope = (center_x3-(center_x1+center_x2)/2)/(center_y3-(center_y1+center_y2)/2)
             h=int((center_x1+center_x2)/2)
             i=int((center_y1+center_y2)/2)
             send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
+            MAR.walk_line='online'
     #print(slope)
  
 
@@ -347,6 +349,7 @@ if __name__ == '__main__':
                             camera()
                         # second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
                             arrow_flag()
+                        print('Yaw:',send.imu_value_Yaw)
                         print('Y:', MAR.arrow_center[1])
                         print('X:', MAR.arrow_center[0])
                         if MAR.first_arrow_flag == True:  #讓機器人正對第1個箭頭
@@ -357,10 +360,10 @@ if __name__ == '__main__':
                             send.sendContinuousValue(MAR.speed,0,0,MAR.theta,0)
                             send.sendHeadMotor(2,1400,50)
                         else:
-                            if MAR.arrow_center[1]>=190:
+                            if MAR.arrow_center[1]>=170:
                                 MAR.speed=2000
                                 MAR.i+=1
-                                if MAR.i>=8:
+                                if MAR.i>=6:
                                     MAR.turn_now_flag=True
                                     MAR.i=0
                             #print(turn_now_flag)
