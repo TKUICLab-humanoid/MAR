@@ -23,9 +23,9 @@ def initial():
     turn_now_flag=0
 #----------------------------------------------------------------------
     #第二階段旗標
-    second_part_flag=1 #成功判斷銀幕內有箭頭
-    go_to_second_part_flag=1#線段只有在銀幕下方
-    next_stage_flag=1 #修正是否正對箭頭
+    second_part_flag=0#成功判斷銀幕內有箭頭
+    go_to_second_part_flag=0#線段只有在銀幕下方
+    next_stage_flag=0 #修正是否正對箭頭
 #----------------------------------------------------------------------
     #步態初始化
     origin_theta=0
@@ -36,9 +36,9 @@ def imu_right(flag,origin_theta,origin_Y):#90度右轉
     yaw = send.imu_value_Yaw
     print('trun right')
     time.sleep(0.1)
-    send.sendContinuousValue(2300,origin_Y,0,-5+origin_theta,0)
+    send.sendContinuousValue(2100,origin_Y,0,-5+origin_theta,0)
     send.sendHeadMotor(2,2750,50)
-    if  yaw < -88:#成功右轉90度
+    if  yaw < -90:#成功右轉90度
         print("end")
         send.sendSensorReset()
         flag=1
@@ -56,7 +56,7 @@ def imu_left(flag,origin_theta,origin_Y):#90度左轉
         flag=1
     return flag
 def imu_go(origin_theta,arrow_center_x):#直走
-    theta=origin_theta+1
+    theta=origin_theta
     print("go go go!")
     time.sleep(0.1)
     yaw = send.imu_value_Yaw
@@ -130,9 +130,8 @@ def camera(straight_temp, right_temp, left_temp):#判斷箭頭
 def correct_go_to_arrow(origin_theta,i):
     slope , go_to_second_part_flag, correct_walking_right, correct_walking_left, big_turn_right, big_turn_left= calculate()
     theta = 0
-    speed = 0
+    speed = -500
     print('slope:', slope)
-    time.sleep(0.3)
     if -0.05 < slope < 0.05:
         theta = 0+origin_theta
         i+=1
@@ -152,24 +151,21 @@ def correct_go_to_arrow(origin_theta,i):
     return theta, speed, i
 
 def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag):
-    if straight_temp>=5:#成功連續判斷20次
+    if straight_temp>=3:#成功連續判斷20次
         straight_temp=0
         print("go Straight")
-        time.sleep(0.1)
         second_part_flag=1
         turn_right_flag=0
         turn_left_flag=0
-    elif right_temp>=5:
+    elif right_temp>=3:
         right_temp=0
         print("go Right")
-        time.sleep(0.1)
         second_part_flag=1
         turn_right_flag+=1
         turn_left_flag=0
-    elif left_temp>=5:
+    elif left_temp>=3:
         left_temp=0
         print("go Left")
-        time.sleep(0.1)
         second_part_flag=1
         turn_right_flag=0
         turn_left_flag+=1
@@ -324,11 +320,10 @@ if __name__ == '__main__':
                                 send.sendSensorReset()
                                 i=0
                                 send.sendHeadMotor(2,2600,50)
-                                time.sleep(0.2)
                             print('next flag:', next_stage_flag)
                             send.sendContinuousValue(speed,origin_Y,0,theta,0)
                         else:
-                            if arrow_center_y>=140:
+                            if arrow_center_y>=100:
                                 speed=2000
                                 i+=1
                                 if i>=5:
