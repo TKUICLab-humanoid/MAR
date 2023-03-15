@@ -117,7 +117,7 @@ def imu_go():#直走
             MAR.theta = -3+MAR.origin_theta
             print('修正：右轉')
         elif yaw < -3:
-            MAR.theta = 2+MAR.origin_theta
+            MAR.theta = 3+MAR.origin_theta
             print('修正：左轉')
 
 def camera():#判斷箭頭
@@ -186,8 +186,8 @@ def correct_go_to_arrow():
         MAR.theta = -3+MAR.origin_theta
         MAR.speed = 0
     #turn left 
-    elif 0.4 > MAR.slope > 0.05:
-        MAR.theta = 1+MAR.origin_theta
+    elif 0.4 > MAR.slope > 0.1:
+        MAR.theta = 2+MAR.origin_theta
     elif MAR.slope > 0.4:
         MAR.theta = 3+MAR.origin_theta
         MAR.speed = 0
@@ -220,29 +220,29 @@ def arrow_flag():
 
 def theta_value():#判斷斜率
     if MAR.walk_line == 'line_at_right':
-        MAR.theta = -4+MAR.origin_theta
+        MAR.theta = -2+MAR.origin_theta
         MAR.speed = 3000
     elif MAR.walk_line == 'line_at_left':
-        MAR.theta = 4+MAR.origin_theta
+        MAR.theta = 3+MAR.origin_theta
         MAR.speed = 3000
     elif MAR.walk_line == 'big_turn_right':
-        MAR.theta = -5+MAR.origin_theta
+        MAR.theta = -3+MAR.origin_theta
         MAR.speed = 3000
     elif MAR.walk_line == 'big_turn_left':
-        MAR.theta = 5+MAR.origin_theta
+        MAR.theta = 4+MAR.origin_theta
         MAR.speed = 3000
     else:
         sp=[3500,3400,3300,3300,3200,3200,3100,3100,3100]
         th=[0,0,1,1,2,2,3,3,3]
         #walk straight
         if MAR.slope >= 0.9:
-            MAR.theta = 5+MAR.origin_theta
+            MAR.theta = 4+MAR.origin_theta
             MAR.speed = 3000
         elif MAR.slope>=0:
             MAR.speed = int(sp[math.floor(MAR.slope/0.1)])
             MAR.theta = int(th[math.floor(MAR.slope/0.1)])+MAR.origin_theta
         elif  MAR.slope <= -0.9:
-            MAR.theta = -5+MAR.origin_theta
+            MAR.theta = -3+MAR.origin_theta
             MAR.speed = 3000
         else:
             MAR.speed = int(sp[math.floor(-MAR.slope/0.1)])
@@ -306,9 +306,9 @@ def calculate():#計算斜率
         elif center_x3 < 80:
             MAR.walk_line = 'big_turn_left'
     else:#計算斜率
-        if center_x3 < 110 and center_x2 < 110:
+        if center_x3 < 80 and center_x2 < 80:
             MAR.walk_line = 'line_at_left'
-        elif center_x3 > 210 and center_x2 > 210:
+        elif center_x3 > 190 and center_x2 > 190:
             MAR.walk_line = 'line_at_right'
         elif center_x1==0 and center_y1==0:#first part don't have line
             MAR.slope = (center_x3-center_x2)/(center_y3-center_y2)
@@ -360,10 +360,10 @@ if __name__ == '__main__':
                             send.sendContinuousValue(MAR.speed,0,0,MAR.theta,0)
                             send.sendHeadMotor(2,1400,50)
                         else:
-                            if MAR.arrow_center[1]>=170:
+                            if MAR.arrow_center[1]>=160:
                                 MAR.speed=2000
                                 MAR.i+=1
-                                if MAR.i>=6:
+                                if MAR.i>=5:
                                     MAR.turn_now_flag=True
                                     MAR.i=0
                             #print(turn_now_flag)
