@@ -16,11 +16,11 @@ class MAR_API:
         self.finish_turn_flag = True                                        #完成箭頭轉彎
         self.first_arrow_flag = True                                        #線道箭頭
         self.turn_now_flag = False                                          #可以轉彎
-        self.head = 2600                                                    #頭部角度
+        self.head = 2700                                                    #頭部角度
         self.speed = 0                                                      #速度
         self.theta = 0                                                      #角度
         self.origin_theta = 0                                               #初始角度
-        self.spped_range=np.array([3500,3400,3300,3300,3200,3200,3100,3100,3100])   #速度範圍
+        self.speed_range=np.array([4000,4000,3900,3800,3800,3700,3700,3600,3600])   #速度範圍
         self.theta_range=np.array([0,0,1,1,2,2,3,3,3])                              #角度範圍
         self.slope = 0                                                      #斜率
         self.center_1=np.array([0,0])
@@ -34,7 +34,7 @@ class MAR_API:
         self.i = 0
         self.delay_cnt = 0
         self.arrow_status = 'None'                                          #箭頭種類
-        self.line_status = 'go'
+        self.line_status = '起步'
         self.line_area = np.array([0,0,320,320,0,0])                        #線的邊界[Xmax Ymax Xmin Ymin X Y]
         self.time1 = 0
         self.time2 = 0
@@ -44,7 +44,7 @@ class MAR_API:
         self.turn_now_flag = False
         self.finish_turn_flag = False
         self.first_arrow_flag = True
-        self.head = 2600
+        self.head = 2700
         self.speed = 0
         self.theta = 0
         self.slope = 0
@@ -60,14 +60,17 @@ class MAR_API:
         self.i = 0
         self.delay_cnt = 0
         self.arrow_status = 'None'
-        self.line_status = 'go'
+        self.line_status = '起步'
     def print_data(self):                                                   #print
         print('==============================================')
         print('Walk status : ', self.walk_status)
         print('Line status : ',self.line_status)
         print('Slope : ',self.slope)
         print('Theta : ',self.theta)
-        print('Speed : ',self.speed)        
+        print('Speed : ',self.speed)
+        print('Line center X : ',self.line_area[4])
+        print('Line center X : ',self.line_area[5])        
+        print(self.center_2[0])
         print('==============================================')
         print('Arrow : ',self.arrow_status)
         print('Arrow center X : ',self.arrow_center[0])
@@ -140,25 +143,18 @@ def calculate_slop_new():
     MAR.center_2 = np.array([0,0])
     total_1=np.array([0,0])
     total_2=np.array([0,0])
-    for i in range(0,8):
+
+    for i in range(len(send.color_mask_subject_cnts)):
         for j in range(send.color_mask_subject_cnts[i]):
             if send.color_mask_subject_size[i][j] > 1000:
                 if send.color_mask_subject_XMax[i][j] > MAR.line_area[0]:
                     MAR.line_area[0] = send.color_mask_subject_XMax[i][j]
                 if send.color_mask_subject_YMax[i][j] > MAR.line_area[1]:
                     MAR.line_area[1] = send.color_mask_subject_YMax[i][j]
-                if send.color_mask_subject_XMin[i][j] < MAR.line_area[3]:
+                if send.color_mask_subject_XMin[i][j] < MAR.line_area[2]:
                     MAR.line_area[2] = send.color_mask_subject_XMin[i][j]
                 if send.color_mask_subject_YMin[i][j] < MAR.line_area[3]:
                     MAR.line_area[3] = send.color_mask_subject_YMin[i][j]
-    # for i in range(MAR.line_area[2],MAR.line_area[2]+20):
-    #     for j in range(MAR.line_area[3],MAR.line_area[3]+20):
-    #         if send.Label_Model[j*320+i] != 0:
-    #             cnt1+=1
-    # for i in range(MAR.line_area[0]-20,MAR.line_area[0]):
-    #     for j in range(MAR.line_area[2]-20,MAR.line_area[2]):
-    #         if send.Label_Model[j*320+i] != 0:
-    #             cnt2+=1
     if MAR.line_area[0] == 0:
         MAR.slope = 0 
     else:
@@ -183,18 +179,8 @@ def calculate_slop_new():
         MAR.slope = (MAR.center_1[0]-MAR.center_2[0])/(MAR.center_1[1]-MAR.center_2[1])
         send.drawImageFunction(2,0,MAR.center_1[0],MAR.center_2[0],MAR.center_1[1],MAR.center_2[1],255,255,255)
         send.drawImageFunction(5,1,MAR.line_area[2],MAR.line_area[0],MAR.line_area[3],MAR.line_area[1],0,0,0)
-
-        # if cnt1 > 50 and cnt2 > 50:            
-        #     MAR.slope = -int(MAR.line_area[0]-MAR.line_area[2])/int(MAR.line_area[1]-MAR.line_area[3]) 
-        #     send.drawImageFunction(2,0,MAR.line_area[0],MAR.line_area[2],MAR.line_area[3],MAR.line_area[1],255,255,255)   
-        #     print('aaaaaaaaaaa')        
-        # else:
-        #     MAR.slope = int(MAR.line_area[0]-MAR.line_area[2])/int(MAR.line_area[1]-MAR.line_area[3])
-        #     send.drawImageFunction(2,0,MAR.line_area[2],MAR.line_area[0],MAR.line_area[3],MAR.line_area[1],255,255,255)
-        #     print('bbbbbbbbbbbbbbb')
         MAR.line_area[4] = (MAR.line_area[0]+MAR.line_area[2])/2
-        MAR.line_area[5] = (MAR.line_area[1]+MAR.line_area[3])/2        
-        # send.drawImageFunction(5,1,MAR.line_area[2],MAR.line_area[0],MAR.line_area[3],MAR.line_area[1],0,0,0)
+        MAR.line_area[5] = (MAR.line_area[1]+MAR.line_area[3])/2 
 
 def line_control():         #修線
     if MAR.center_1[1]+MAR.center_2[1] == 0:
@@ -219,49 +205,49 @@ def line_control():         #修線
             MAR.theta = 5+MAR.origin_theta
             MAR.speed = 3000
         elif MAR.slope>=0:
-            MAR.speed = int(MAR.spped_range[math.floor(MAR.slope/0.1)])
-            MAR.theta = int(MAR.theta_range[math.floor(MAR.slope/0.1)])
+            MAR.speed = int(MAR.speed_range[int(MAR.slope/0.1)])
+            MAR.theta = int(MAR.theta_range[int(MAR.slope/0.1)])
         elif  MAR.slope <= -0.9:
             MAR.theta = -5
             MAR.speed = 3000
         else:
-            MAR.speed = int(MAR.spped_range[math.floor(-MAR.slope/0.1)])
-            MAR.theta = -int(MAR.theta_range[math.floor(-MAR.slope/0.1)])
-        MAR.line_status = 'go'
+            MAR.speed = int(MAR.speed_range[int(-MAR.slope/0.1)])
+            MAR.theta = -int(MAR.theta_range[int(-MAR.slope/0.1)])
+        MAR.line_status = '直走'
 
-def line_control_new():         #修線
+def line_control_new():         #修線   
     if MAR.line_area[5] > 180:
         if MAR.center_2[0] > 240:
             MAR.theta = -4
-            MAR.speed = 2800
+            MAR.speed = 3500
             MAR.line_status = '大右轉'
         elif MAR.center_2[0] < 80:
             MAR.theta = 4
-            MAR.speed = 2800
+            MAR.speed = 3500
             MAR.line_status = '大左轉'
-    if MAR.slope > -0.2 and MAR.slope < 0.2:
-        if MAR.center_2[0] < 110:
-            MAR.theta = 5
-            MAR.speed = 2800
-            MAR.line_status = '線在左邊'
-        elif MAR.center_2[0] > 210:
-            MAR.theta = -5
-            MAR.speed = 2800
-            MAR.line_status = '線在右邊'
     else:
         if MAR.slope >= 0.9:
-            MAR.theta = 5+MAR.origin_theta
-            MAR.speed = 2800
-        elif MAR.slope>=0:
-            MAR.speed = int(MAR.spped_range[math.floor(MAR.slope/0.1)])
-            MAR.theta = int(MAR.theta_range[math.floor(MAR.slope/0.1)])
+            MAR.theta = 5
+            MAR.speed = 3500
+            MAR.line_status = '左轉'
         elif  MAR.slope <= -0.9:
             MAR.theta = -5
-            MAR.speed = 2800
+            MAR.speed = 3500
+            MAR.line_status = '右轉'
         else:
-            MAR.speed = int(MAR.spped_range[math.floor(-MAR.slope/0.1)])
-            MAR.theta = -int(MAR.theta_range[math.floor(-MAR.slope/0.1)])
-        MAR.line_status = 'go'
+            MAR.speed = MAR.speed_range[int(MAR.slope*10)]
+            MAR.theta = MAR.theta_range[int(MAR.slope*10)]
+            MAR.line_status = '直走'
+            if MAR.slope < 0:
+                MAR.theta = -MAR.theta
+            if MAR.line_area[4] < 110:
+                MAR.theta += 3
+                MAR.speed = 3500
+                MAR.line_status = '線在左邊'
+            elif MAR.line_area[4] > 190:
+                MAR.theta -= 3
+                MAR.speed = 3500
+                MAR.line_status = '線在右邊'
 
 def find_arrow():           #尋找箭頭
     #cap = cv2.VideoCapture(7)
@@ -330,13 +316,13 @@ def find_arrow():           #尋找箭頭
             MAR.right_arrow=0
             MAR.left_arrow+=1
     else:
-        MAR.arrow_temp[0]=0
-        MAR.arrow_temp[1]=0
-        MAR.arrow_temp[2]=0
         MAR.arrow_temp[3]+=1
         send.drawImageFunction(1,1,0,0,0,0,255,0,0)
         if MAR.arrow_temp[3]>20:
             MAR.arrow_status = 'None'
+            MAR.arrow_temp[0]=0
+            MAR.arrow_temp[1]=0
+            MAR.arrow_temp[2]=0
             MAR.arrow_temp[3]=0
             MAR.arrow_flag = False
             MAR.right_arrow=0
@@ -433,13 +419,13 @@ if __name__ == '__main__':
                 elif MAR.walk_status == 'Arrow':
                     if MAR.turn_now_flag == False:
                         find_arrow()
-                    arrow_control()   
+                    arrow_control()                  
+                send.sendHeadMotor(2,MAR.head,50)
+                send.sendContinuousValue(MAR.speed,0,0,MAR.theta+MAR.origin_theta,0)
+                # time.sleep(0.01)
                 MAR.time2 = time.time()
                 MAR.FPS = MAR.time2-MAR.time1
                 MAR.print_data()             
-                send.sendHeadMotor(2,MAR.head,50)
-                send.sendContinuousValue(MAR.speed,0,0,MAR.theta+MAR.origin_theta,0)
-                time.sleep(0.05)
                 MAR.time1 = 0
                 MAR.time2 = 0                
 

@@ -9,6 +9,10 @@ import cv2
 import math
 imgdata = [[None for high in range(240)]for wight in range(320)]
 start = True
+class MAR_API:
+    def __init__(self):
+        self.yaw_offset = 0
+MAR = MAR_API()
 def initial():
     global i, cnt, speed, straight_temp, right_temp, left_temp, turn_left_flag, turn_now_flag, turn_right_flag, finish_turn_left_flag, finish_turn_right_flag, second_part_flag, next_stage_flag, go_to_second_part_flag, origin_theta, origin_Y
     i=0
@@ -23,43 +27,46 @@ def initial():
     turn_now_flag=0
 #----------------------------------------------------------------------
     #第二階段旗標
-    second_part_flag=0#成功判斷銀幕內有箭頭
+    second_part_flag=1#成功判斷銀幕內有箭頭
     go_to_second_part_flag=0#線段只有在銀幕下方
     next_stage_flag=0 #修正是否正對箭頭
 #----------------------------------------------------------------------
     #步態初始化
     origin_theta=0
     origin_Y=0
+    MAR.yaw_offset = 0
 
 def imu_right(flag,origin_theta,origin_Y):#90度右轉
     flag=0
-    yaw = send.imu_value_Yaw
+    yaw = send.imu_value_Yaw-MAR.yaw_offset
     print('trun right')
     time.sleep(0.1)
     send.sendContinuousValue(2100,origin_Y,0,-5+origin_theta,0)
     send.sendHeadMotor(2,2750,50)
     if  yaw < -90:#成功右轉90度
         print("end")
-        send.sendSensorReset()
+        MAR.yaw_offset = send.imu_value_Yaw
+        # send.sendSensorReset()
         flag=1
     return flag
 def imu_left(flag,origin_theta,origin_Y):#90度左轉
     flag=0
-    yaw = send.imu_value_Yaw
+    yaw = send.imu_value_Yaw-MAR.yaw_offset
     print('trun left')
     time.sleep(0.1)
     send.sendContinuousValue(2300,origin_Y,0,5+origin_theta,0)
     send.sendHeadMotor(2,2750,50)
     if  yaw > 80:#成功左轉90度
         print("end")
-        send.sendSensorReset()
+        MAR.yaw_offset = send.imu_value_Yaw
+        # send.sendSensorReset()
         flag=1
     return flag
 def imu_go(origin_theta,arrow_center_x):#直走
     theta=origin_theta
     print("go go go!")
     time.sleep(0.1)
-    yaw = send.imu_value_Yaw
+    yaw = send.imu_value_Yaw-MAR.yaw_offset
     speed = 3000
     if 0<arrow_center_x<=140:
         theta=4
@@ -317,7 +324,8 @@ if __name__ == '__main__':
                             theta, speed, i=correct_go_to_arrow(origin_theta,i)
                             if i>=5:
                                 next_stage_flag=1
-                                send.sendSensorReset()
+                                # send.sendSensorReset()
+                                MAR.yaw_offset = send.imu_value_Yaw
                                 i=0
                                 send.sendHeadMotor(2,2600,50)
                             print('next flag:', next_stage_flag)
