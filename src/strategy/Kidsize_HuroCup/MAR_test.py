@@ -17,6 +17,7 @@ class MAR_API:
         self.first_arrow_flag = True                                   #對正箭頭 next_stage_flag
         self.turn_now_flag = False                                      #正在轉
         self.speed = 0                                                  #速度
+        self.speed_y = 0
         self.theta = 0                                                  #角度
         self.origin_theta = 0                                           #初始角度
         self.slope = 0                                                  #斜率
@@ -38,6 +39,7 @@ class MAR_API:
         self.finish_turn_flag = False
         self.first_arrow_flag = True
         self.speed = 0
+        self.speed_y = 0
         self.theta = 0
         self.slope = 0
         self.center_point = np.zeros((3,5))
@@ -48,11 +50,11 @@ class MAR_API:
         self.center_x2 = 0
         self.center_y2 = 0
     def print_data(self):                                               #print全部寫在這裡
-        print('line in camera bottom : ', MAR.walk_line)
-        print('slope:',MAR.slope)
-        print('theta',MAR.theta)
-        print('speed',MAR.speed)
-        print('arrow ok : ', MAR.arrow_flag)
+        print('line in camera bottom : ', self.walk_line)
+        print('slope:',self.slope)
+        print('theta',self.theta)
+        print('speed',self.speed)
+        print('arrow ok : ', self.arrow_flag)
         print(self.center_x1)
         print(self.center_x2)
         print('==============================================')
@@ -95,7 +97,7 @@ def imu_right():#90度右轉
     MAR.finish_turn_flag = False
     yaw = send.imu_value_Yaw
     print('箭頭：右轉')
-    send.sendContinuousValue(2200,0,0,-5+MAR.origin_theta,0)
+    send.sendContinuousValue(2500,0,0,-4+MAR.origin_theta,0)
     send.sendHeadMotor(2,1400,50)
     if  yaw < -83:#成功右轉90度
         print("箭頭右轉結束")
@@ -114,7 +116,7 @@ def imu_left():#90度左轉
         MAR.finish_turn_flag = True
 
 def imu_go():#直走
-    MAR.theta = MAR.origin_theta+1
+    MAR.theta = MAR.origin_theta
     print("直走")
     yaw = send.imu_value_Yaw
     MAR.speed = 2000
@@ -125,11 +127,11 @@ def imu_go():#直走
         MAR.theta=-5
         send.sendContinuousValue(MAR.speed,0,0,MAR.theta+MAR.origin_theta,0)
     else:
-        if  yaw > 3:
+        if  yaw > 11:
             MAR.theta = -3+MAR.origin_theta
             print('修正：右轉')
-        elif yaw < -3:
-            MAR.theta = 2+MAR.origin_theta
+        elif yaw < 5:
+            MAR.theta = 5+MAR.origin_theta
             print('修正：左轉')
 
 def camera():#判斷箭頭
@@ -193,16 +195,18 @@ def correct_go_to_arrow():
         MAR.i+=1
     #turn right
     elif -0.4 < MAR.slope < -0.05:
-        MAR.theta = -1+MAR.origin_theta
+        MAR.theta = -2+MAR.origin_theta
     elif MAR.slope < -0.4:
-        MAR.theta = -3+MAR.origin_theta
+        MAR.theta = -4+MAR.origin_theta
         MAR.speed = -500
+        MAR.speed_y = 800
     #turn left 
     elif 0.4 > MAR.slope > 0.05:
         MAR.theta = 1+MAR.origin_theta
     elif MAR.slope > 0.4:
         MAR.theta = 3+MAR.origin_theta
         MAR.speed = -500
+        MAR.speed_y = 500
     if MAR.i>=5:
         MAR.first_arrow_flag = False
         send.sendSensorReset()
@@ -271,9 +275,6 @@ def region():
     targetxmax = 0
     targetymin = 240
     targetymax = 0
-    MAR.center_x1 = 0
-    MAR.center_y1 = 0
-    MAR.center_x2 = 0
     MAR.center_y2 = 0
     for i in range (len(send.color_mask_subject_cnts)):
         for j in range (send.color_mask_subject_cnts[i]):
@@ -439,14 +440,15 @@ if __name__ == '__main__':
                             #calculate()
                             region()
                             correct_go_to_arrow()
+                            MAR.turn_now_flag=True
                             print('next flag:', MAR.first_arrow_flag)
-                            send.sendContinuousValue(MAR.speed,0,0,MAR.theta,0)
+                            send.sendContinuousValue(MAR.speed,MAR.speed_y,0,MAR.theta,0)
                             send.sendHeadMotor(2,1400,50)
                         else:
                             if MAR.arrow_center[1]>=170:
                                 MAR.speed=2000
                                 MAR.i+=1
-                                if MAR.i>=6:
+                                if MAR.i>=4:
                                     MAR.turn_now_flag=True
                                     MAR.i=0
                             #print(turn_now_flag)
