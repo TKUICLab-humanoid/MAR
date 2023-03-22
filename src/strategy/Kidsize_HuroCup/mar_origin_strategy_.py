@@ -27,9 +27,9 @@ def initial():
     turn_now_flag=0
 #----------------------------------------------------------------------
     #第二階段旗標
-    second_part_flag=1#成功判斷銀幕內有箭頭
-    go_to_second_part_flag=1#線段只有在銀幕下方
-    next_stage_flag=1 #修正是否正對箭頭
+    second_part_flag=0#成功判斷銀幕內有箭頭
+    go_to_second_part_flag=0#線段只有在銀幕下方
+    next_stage_flag=0 #修正是否正對箭頭
 #----------------------------------------------------------------------
     #步態初始化
     origin_theta=0
@@ -43,7 +43,7 @@ def imu_right(flag,origin_theta,origin_Y):#90度右轉
     time.sleep(0.1)
     send.sendContinuousValue(2100,origin_Y,0,-5+origin_theta,0)
     send.sendHeadMotor(2,2750,50)
-    if  yaw < -85:#成功右轉90度
+    if  yaw < -90:#成功右轉90度
         print("end")
         MAR.yaw_offset = send.imu_value_Yaw
         # send.sendSensorReset()
@@ -158,19 +158,19 @@ def correct_go_to_arrow(origin_theta,i):
     return theta, speed, i
 
 def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag):
-    if straight_temp>=3:#成功連續判斷20次
+    if straight_temp>=10:#成功連續判斷20次
         straight_temp=0
         print("go Straight")
         second_part_flag=1
         turn_right_flag=0
         turn_left_flag=0
-    elif right_temp>=3:
+    elif right_temp>=2:
         right_temp=0
         print("go Right")
         second_part_flag=1
         turn_right_flag+=1
         turn_left_flag=0
-    elif left_temp>=3:
+    elif left_temp>=2:
         left_temp=0
         print("go Left")
         second_part_flag=1
@@ -182,29 +182,29 @@ def theta_value(origin_theta):#判斷斜率
     theta=0
     speed=0
     if correct_walking_right==1:
-        theta = -4+origin_theta
+        theta = -5+origin_theta
         speed = 2800
     elif correct_walking_left==1:
-        theta = 4+origin_theta
+        theta = 5+origin_theta
         speed = 2800
     elif big_turn_right==1:
-        theta = -4+origin_theta
+        theta = -5+origin_theta
         speed = 2800
     elif big_turn_left==1:
-        theta = 4+origin_theta
+        theta = 5+origin_theta
         speed = 2800
     else:
-        sp=[3000,3000,2900,2800,2800,2800,2700,2700,2600]
-        th=[0,1,1,2,2,2,3,4,4]
+        sp=[3500,3500,3300,3300,3200,3200,3100,3100,3000]
+        th=[0,1,2,3,3,4,4,5,5]
         #walk straight
         if slope >= 0.9:
-            theta = 4+origin_theta
+            theta = 5+origin_theta
             speed = 2800
         elif slope>=0:
             speed = int(sp[math.floor(slope/0.1)])
             theta = int(th[math.floor(slope/0.1)])+origin_theta
         elif  slope <= -0.9:
-            theta = -4+origin_theta
+            theta = -5+origin_theta
             speed = 2800
         else:
             speed = int(sp[math.floor(-slope/0.1)])
@@ -213,86 +213,92 @@ def theta_value(origin_theta):#判斷斜率
 def calculate():#計算斜率
     cnt1=0
     cnt2=0
-    cnt3=0
     total_x1=0
     total_y1=0
     total_x2=0
     total_y2=0
-    total_x3=0
-    total_y3=0
     center_x1=0
     center_y1=0
     center_x2=0
     center_y2=0
-    center_x3=0
-    center_y3=0
     slope=0
     go_to_second_part_flag=0
     correct_walking_left=0
     correct_walking_right=0
     big_turn_right=0
     big_turn_left=0
-    for high in range(240):
-        for wight in range(320):
-            imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 60 <= high < 110:
-                if imgdata[wight][high] != 0:
-                    total_x1+=wight
-                    total_y1+=high
-                    cnt1+=1
-            elif 110 <= high < 210:
-                if imgdata[wight][high] != 0:
-                    total_x2+=wight
-                    total_y2+=high
-                    cnt2+=1
-            elif high >=210 :
-                if imgdata[wight][high] != 0:
-                    total_x3+=wight
-                    total_y3+=high
-                    cnt3+=1
-    send.drawImageFunction(3, 0, 0, 320, 60, 60, 138, 43, 226)
-    send.drawImageFunction(4, 0, 0, 320, 110, 110, 138, 43, 226)
-    send.drawImageFunction(5, 0, 0, 320, 210, 210, 138, 43, 226)
-    if cnt1 > 50:#去除雜訊點
-        center_x1=total_x1/cnt1
-        center_y1=total_y1/cnt1
-    if cnt2 > 50:
-        center_x2=total_x2/cnt2
-        center_y2=total_y2/cnt2
-    if cnt3 > 50:
-        center_x3=total_x3/cnt3
-        center_y3=total_y3/cnt3
-    center_x1=int(center_x1)
-    center_y1=int(center_y1)
-    center_x2=int(center_x2)
-    center_y2=int(center_y2)
-    center_x3=int(center_x3)
-    center_y3=int(center_y3)
-    if center_y2-center_y3==0 or  center_y1-(center_y2+center_y3)/2==0: #找不到線
-        print("None")
+    xmin = 320
+    xmax = 0
+    ymin = 240
+    ymax = 0
+   
+    for i in range(8):
+        for j in range(send.color_mask_subject_cnts[i]):
+            if send.color_mask_subject_size[i][j] > 2000:
+                if xmin > send.color_mask_subject_XMin[i][j]:
+                    xmin = send.color_mask_subject_XMin[i][j]
+                if xmax < send.color_mask_subject_XMax[i][j]:
+                    xmax = send.color_mask_subject_XMax[i][j]
+                if ymin > send.color_mask_subject_YMin[i][j]:
+                    ymin = send.color_mask_subject_YMin[i][j]
+                if ymax < send.color_mask_subject_YMax[i][j]:
+                    ymax = send.color_mask_subject_YMax[i][j]
+                if ymin < 50:
+                    ymin = 50
+    if xmax != 0 :
+        for high in range(ymin, ymax):
+            for wight in range(xmin, xmax):
+                cen_y = (ymin+ymax)/2
+                if high < cen_y:
+                    if send.Label_Model[high*320+wight] != 0:
+                        total_x1+=wight
+                        total_y1+=high
+                        cnt1+=1
+                else: 
+                        total_x2+=wight
+                        total_y2+=high
+                        cnt2+=1
+        center_x1=int(total_x1/cnt1)
+        center_y1=int(total_y1/cnt1)
+        center_x2=int(total_x2/cnt2)
+        center_y2=int(total_y2/cnt2)
+        slope = (center_x1-center_x2)/(center_y1-center_y2)
+        send.drawImageFunction(5,1,xmin,xmax,ymin,ymax,0,0,0)
+        send.drawImageFunction(2,0,center_x1,center_x2,center_y1,center_y2,0,0,0)
+        print(xmin)
+    else :
         slope = 0
-    elif center_x1==0 and center_x2==0 and center_y1==0 and center_y2==0:#機器人偏移或是已經要進入第二階段
-        if center_x3 > 240:
+    if (center_y1+center_y2)/2 > 150:#機器人偏移或是已經要進入第二階段
+        if center_x2 > 240:
             big_turn_right=1
-        elif center_x3 < 80:
+        elif center_x2 < 80:
             big_turn_left=1
-    else:#計算斜率
-        if center_x3 < 120 and center_x2 < 120:
-            correct_walking_left=1
-        elif center_x3 > 200 and center_x2 > 200:
-            correct_walking_right=1
-        if center_x1==0 and center_y1==0:#first part don't have line
-            slope = (center_x3-center_x2)/(center_y3-center_y2)
-            send.drawImageFunction(2,0,center_x2,center_x3,center_y2,center_y3,0,0,0)
-            go_to_second_part_flag=1#進入第二階段的指標，線在機器人螢幕的正下方
-        elif center_x3==0 and center_y3==0:
-            slope = (center_x2-center_x1)/(center_y2-center_y1)
-            send.drawImageFunction(2,0,center_x1,center_x2,center_y1,center_y2,0,0,0)
         else:
-            slope = (center_x3-(center_x1+center_x2)/2)/(center_y3-(center_y1+center_y2)/2)
-            h=int((center_x1+center_x2)/2)
-            i=int((center_y1+center_y2)/2)
-            send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
+            go_to_second_part_flag=1
+    else:
+        if(center_x1+center_x2)/2 > 200:
+            correct_walking_right=1
+        elif (center_x1+center_x2)/2 < 120:
+            correct_walking_left=1
+
+    # else:#計算斜率
+        
+        # if center_x3 < 120 and center_x2 < 120:
+        #     correct_walking_left=1
+        # elif center_x3 > 200 and center_x2 > 200:
+        #     correct_walking_right=1
+        # if center_x1==0 and center_y1==0:#first part don't have line
+        #     slope = (center_x3-center_x2)/(center_y3-center_y2)
+        #     send.drawImageFunction(2,0,center_x2,center_x3,center_y2,center_y3,0,0,0)
+        #     go_to_second_part_flag=1#進入第二階段的指標，線在機器人螢幕的正下方
+        # elif center_x3==0 and center_y3==0:
+        #     slope = (center_x2-center_x1)/(center_y2-center_y1)
+        #     send.drawImageFunction(2,0,center_x1,center_x2,center_y1,center_y2,0,0,0)
+        # else:
+        #     slope = (center_x3-(center_x1+center_x2)/2)/(center_y3-(center_y1+center_y2)/2)
+        #     h=int((center_x1+center_x2)/2)
+        #     i=int((center_y1+center_y2)/2)
+        #     send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
     #print(slope)
     return slope , go_to_second_part_flag , correct_walking_right, correct_walking_left, big_turn_right, big_turn_left
 
@@ -324,11 +330,11 @@ if __name__ == '__main__':
                             theta, speed, i=correct_go_to_arrow(origin_theta,i)
                             if i>=5:
                                 next_stage_flag=1
+                                turn_now_flag=1
                                 # send.sendSensorReset()
                                 MAR.yaw_offset = send.imu_value_Yaw
                                 i=0
                                 send.sendHeadMotor(2,2600,50)
-                                turn_now_flag=1
                             print('next flag:', next_stage_flag)
                             send.sendContinuousValue(speed,origin_Y,0,theta,0)
                         else:
