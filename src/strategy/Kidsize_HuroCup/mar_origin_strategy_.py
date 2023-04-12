@@ -41,7 +41,7 @@ def imu_right(flag,origin_theta,origin_Y):#90度右轉
     yaw = send.imu_value_Yaw-MAR.yaw_offset
     print('trun right')
     send.sendContinuousValue(2100,origin_Y,0,-5+origin_theta,0)
-    send.sendHeadMotor(2,2800,50)
+    send.sendHeadMotor(2,2600,50)
     if  yaw < -90:#成功右轉90度
         print("end")
         MAR.yaw_offset = send.imu_value_Yaw
@@ -52,8 +52,8 @@ def imu_left(flag,origin_theta,origin_Y):#90度左轉
     flag=0
     yaw = send.imu_value_Yaw-MAR.yaw_offset
     print('trun left')
-    send.sendContinuousValue(2300,origin_Y,0,5+origin_theta,0)
-    send.sendHeadMotor(2,2800,50)
+    send.sendContinuousValue(2100,origin_Y,0,5+origin_theta,0)
+    send.sendHeadMotor(2,2600,50)
     if  yaw > 80:#成功左轉90度
         print("end")
         MAR.yaw_offset = send.imu_value_Yaw
@@ -64,7 +64,7 @@ def imu_go(origin_theta,arrow_center_x):#直走
     theta=origin_theta
     print("go go go!")
     yaw = send.imu_value_Yaw-MAR.yaw_offset
-    speed = 3000
+    speed = 3600
     if 0<arrow_center_x<=140:
         theta=4
         send.sendContinuousValue(speed,origin_Y,0,theta+origin_theta,0)
@@ -72,11 +72,11 @@ def imu_go(origin_theta,arrow_center_x):#直走
         theta=-4
         send.sendContinuousValue(speed,origin_Y,0,theta+origin_theta,0)
     else:
-        if  yaw > 3:
+        if  yaw > 8:
             theta = -2+origin_theta
             print('right')
             # time.sleep(0.2)
-        elif yaw < -3:
+        elif yaw < -8:
             theta = 2+origin_theta
             print('left')
             # time.sleep(0.2)
@@ -87,7 +87,8 @@ def camera(straight_temp, right_temp, left_temp):#判斷箭頭
     center_x=0
     STRAIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Straight.xml")
     RIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Right1.xml")
-    LEFT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Left.xml")
+    # LEFT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Left.xml")
+    LEFT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade_left2.xml")
     #ret, frame = cap.read()
     frame = send.originimg
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -189,23 +190,23 @@ def theta_value(origin_theta):#判斷斜率
       #  speed = 3000
     if big_turn_right==1:
         theta = -4+origin_theta
-        speed = 3000
+        speed = 3200
     elif big_turn_left==1:
         theta = 4+origin_theta
-        speed = 3000
+        speed = 3200
     else:
-        sp=[3500,3500,3300,3300,3200,3200,3100,3100,3000]
-        th=[0,1,2,3,3,4,4,4,5]
+        sp=[4000,4000,3800,3800,3700,3700,3600,3600,3600]
+        th=[0,1,2,3,3,3,4,4,4]
         #walk straight
         if slope >= 0.9:
             theta = 5+origin_theta
-            speed = 2800
+            speed = 3400
         elif slope >= 0:
             speed = int(sp[math.floor(slope/0.1)])
             theta = int(th[math.floor(slope/0.1)])+origin_theta
         elif  slope <= -0.9:
             theta = -5+origin_theta
-            speed = 2800
+            speed = 3400
         else:
             speed = int(sp[math.floor(-slope/0.1)])
             theta = -int(th[math.floor(-slope/0.1)])+origin_theta
@@ -213,7 +214,7 @@ def theta_value(origin_theta):#判斷斜率
                 theta -= 3
                 speed = 3000
             elif correct_walking_left==1:
-                theta += 4
+                theta += 3
                 speed = 3000
     return theta, speed, go_to_second_part_flag
 def calculate():#計算斜率
@@ -317,7 +318,7 @@ if __name__ == '__main__':
             if send.is_start == True:
                 if start == True:
                     initial()
-                    send.sendHeadMotor(2,2800,50)
+                    send.sendHeadMotor(2,2600,50)
                     time.sleep(0.5)
                     send.sendHeadMotor(1,2048,50)
                     time.sleep(0.5)
@@ -333,7 +334,7 @@ if __name__ == '__main__':
                         print('Y:', arrow_center_y)
                         print('X:', arrow_center_x)
                         if next_stage_flag==0:
-                            send.sendHeadMotor(2,2800,50)
+                            send.sendHeadMotor(2,2600,50)
                             theta, speed, i=correct_go_to_arrow(origin_theta,i)
                             if i>=5:
                                 next_stage_flag=1
@@ -341,11 +342,11 @@ if __name__ == '__main__':
                                 # send.sendSensorReset()
                                 MAR.yaw_offset = send.imu_value_Yaw
                                 i=0
-                                send.sendHeadMotor(2,2800,50)
+                                send.sendHeadMotor(2,2600,50)
                             print('next flag:', next_stage_flag)
                             send.sendContinuousValue(speed,origin_Y,0,theta,0)
                         else:
-                            if arrow_center_y>=100:
+                            if arrow_center_y>=120:
                                 speed=2000
                                 i+=1
                                 if i>=5:
@@ -355,7 +356,7 @@ if __name__ == '__main__':
                             if turn_right_flag>=1 and turn_now_flag==1:#多次成功判斷右轉與判斷箭頭在銀幕下方
                                 finish_turn_right_flag=imu_right(finish_turn_right_flag,origin_theta,origin_Y)
                                 if finish_turn_right_flag==1:#完成90度右轉判斷旗標歸零
-                                    send.sendHeadMotor(2,2800,50)
+                                    send.sendHeadMotor(2,2600,50)
                                     # time.sleep(0.2)
                                     turn_right_flag=0
                                     finish_turn_right_flag=0
@@ -365,7 +366,7 @@ if __name__ == '__main__':
                             elif turn_left_flag>=1 and turn_now_flag==1:#多次成功判斷左轉與判斷箭頭在銀幕下方
                                 finish_turn_left_flag=imu_left(finish_turn_left_flag,origin_theta,origin_Y)
                                 if finish_turn_left_flag==1:#完成90度左轉判斷旗標歸零
-                                    send.sendHeadMotor(2,2800,50)
+                                    send.sendHeadMotor(2,2600,50)
                                     # time.sleep(0.2)
                                     turn_left_flag=0
                                     finish_turn_left_flag=0
