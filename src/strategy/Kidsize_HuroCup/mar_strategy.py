@@ -45,8 +45,6 @@ class MAR_API:
         self.theta = 0
         self.slope = 0
         self.yaw = 0
-        self.right_arrow = 0                                            #右轉箭頭 turn_right_flag
-        self.left_arrow = 0                                             #左轉箭頭 turn_left_flag
         self.origin_yaw = 0
         self.center_point = np.zeros((3,5))
         self.arrow_temp = np.zeros(3)
@@ -106,7 +104,7 @@ def imu_right():#90度右轉
     send.sendContinuousValue(2500,0,0,-4+MAR.origin_theta,0)
     send.sendHeadMotor(2,1400,50)
     yaw_calculate()
-    if  MAR.yaw - MAR.origin_yaw < -86:#成功右轉90度
+    if  MAR.yaw - MAR.origin_yaw < -83:#成功右轉90度
         print("箭頭右轉結束")
         # send.sendSensorReset()
         MAR.origin_yaw = MAR.yaw
@@ -120,7 +118,7 @@ def imu_left():#90度左轉
     print('箭頭：左轉')
     send.sendContinuousValue(2300,0,0,5+MAR.origin_theta,0)
     send.sendHeadMotor(2,1400,50)
-    if  MAR.yaw - MAR.origin_yaw > 93:#成功左轉90度
+    if  MAR.yaw - MAR.origin_yaw > 78:#成功左轉90度
         print("箭頭左轉結束")
         MAR.origin_yaw = MAR.yaw
         print(MAR.yaw - MAR.origin_yaw)
@@ -139,22 +137,21 @@ def imu_go():#直走
         send.sendContinuousValue(MAR.speed,0,0,MAR.theta+MAR.origin_theta,0)
     else:
         yaw_calculate()
-        if  MAR.yaw - MAR.origin_yaw > 6:
+        if  MAR.yaw - MAR.origin_yaw > 11:
             # MAR.origin_yaw = MAR.yaw
             MAR.theta = -3+MAR.origin_theta
             print('修正：右轉')
-        elif MAR.yaw - MAR.origin_yaw < 0:
+        elif MAR.yaw - MAR.origin_yaw < 5:
             # MAR.origin_yaw = MAR.yaw
-            MAR.theta = 3+MAR.origin_theta
+            MAR.theta = 5+MAR.origin_theta
             print('修正：左轉')
-        # else:
-        #     MAR.theta = 0 + MAR.origin_theta
 
 def yaw_calculate():
     # MAR.yaw = send.imu_value_Yaw
-    if -240 > MAR.yaw - MAR.origin_yaw:
+    if MAR.yaw * MAR.origin_yaw < 0 and abs(MAR.yaw) > 90:
+        if MAR.yaw < 0:
             MAR.yaw = MAR.yaw + 360
-    elif MAR.yaw - MAR.origin_yaw > 240:
+        elif MAR.yaw > 0:
             MAR.yaw = MAR.yaw - 360
 
 def camera():#判斷箭頭
