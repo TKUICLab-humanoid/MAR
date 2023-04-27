@@ -29,8 +29,6 @@ class MAR_API:
         self.arrow_center = np.zeros(2)                                 #箭頭中心[x,y]
         # self.imgdata =np.zeros((320*240))                               #影像
         self.i = 0
-        self.yaw = 0
-        self.origin_yaw = 0
         self.center_x1 = 0
         self.center_y1 = 0
         self.center_x2 = 0
@@ -44,8 +42,6 @@ class MAR_API:
         self.speed_y = 0
         self.theta = 0
         self.slope = 0
-        self.yaw = 0
-        self.origin_yaw = 0
         self.center_point = np.zeros((3,5))
         self.arrow_temp = np.zeros(3)
         self.arrow_center = np.zeros(2)
@@ -99,31 +95,31 @@ imgdata = [[None for high in range(240)]for wight in range(320)]
 
 def imu_right():#90度右轉
     MAR.finish_turn_flag = False
-    MAR.yaw = send.imu_value_Yaw
+    yaw = send.imu_value_Yaw
     print('箭頭：右轉')
     send.sendContinuousValue(3200,0,0,-6+MAR.origin_theta,0)
     send.sendHeadMotor(2,1400,50)
-    if  MAR.yaw - MAR.origin_yaw < -83:#成功右轉90度
+    if  yaw < -83:#成功右轉90度
         print("箭頭右轉結束")
-        MAR.origin_yaw = MAR.yaw
+        send.sendSensorReset()
         MAR.finish_turn_flag = True
 
 def imu_left():#90度左轉
     MAR.finish_turn_flag = False
-    MAR.yaw = send.imu_value_Yaw
+    yaw = send.imu_value_Yaw
     print('箭頭：左轉')
     send.sendContinuousValue(3000,0,0,7+MAR.origin_theta,0)
     send.sendHeadMotor(2,1400,50)
-    if  MAR.yaw - MAR.origin_yaw > 78:#成功左轉90度
+    if  yaw > 78:#成功左轉90度
         print("箭頭左轉結束")
-        MAR.origin_yaw = MAR.yaw
+        send.sendSensorReset()
         MAR.finish_turn_flag = True
 
 def imu_go():#直走
     MAR.theta = MAR.origin_theta
-    print('arrow  number !!!!!!!!!!!!   :',MAR.arrow_temp[0])
+    print(MAR.arrow_center[0])
     print("直走")
-    MAR.yaw = send.imu_value_Yaw
+    yaw = send.imu_value_Yaw
     MAR.speed = 3500
     if 0<MAR.arrow_center[0]<=100:
         MAR.theta=3
@@ -132,11 +128,11 @@ def imu_go():#直走
         MAR.theta=-3
         send.sendContinuousValue(MAR.speed,0,0,MAR.theta+MAR.origin_theta,0)
     else:
-        if  MAR.yaw - MAR.origin_yaw > 10:
+        if  yaw > 10:
             MAR.theta = -3+MAR.origin_theta
             print('修正：右轉')
-        elif MAR.yaw - MAR.origin_yaw < -6:
-            MAR.theta = 5+MAR.origin_theta
+        elif yaw < -6:
+            MAR.theta = 3+MAR.origin_theta
             print('修正：左轉')
 
 def camera():#判斷箭頭
@@ -214,7 +210,7 @@ def correct_go_to_arrow():
         MAR.speed_y = 500
     if MAR.i>=5:
         MAR.first_arrow_flag = False
-        MAR.origin_yaw = send.imu_value_Yaw
+        send.sendSensorReset()
         MAR.i=0
         send.sendHeadMotor(2,1500,50)
         time.sleep(0.2)
