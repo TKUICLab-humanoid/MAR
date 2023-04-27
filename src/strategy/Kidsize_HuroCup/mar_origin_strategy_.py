@@ -27,9 +27,9 @@ def initial():
     turn_now_flag=0
 #----------------------------------------------------------------------
     #第二階段旗標
-    second_part_flag=1#成功判斷銀幕內有箭頭
-    go_to_second_part_flag=1#線段只有在銀幕下方
-    next_stage_flag=1 #修正是否正對箭頭
+    second_part_flag=0#成功判斷銀幕內有箭頭
+    go_to_second_part_flag=0#線段只有在銀幕下方
+    next_stage_flag=0 #修正是否正對箭頭
 #----------------------------------------------------------------------
     #步態初始化
     origin_theta=0
@@ -64,7 +64,7 @@ def imu_go(origin_theta,arrow_center_x):#直走
     theta=origin_theta
     print("go go go!")
     yaw = send.imu_value_Yaw-MAR.yaw_offset
-    speed = 3600
+    speed = 3800
     if 0<arrow_center_x<=140:
         theta=4
         send.sendContinuousValue(speed,origin_Y,0,theta+origin_theta,0)
@@ -162,13 +162,13 @@ def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_righ
         second_part_flag=1
         turn_right_flag=0
         turn_left_flag=0
-    elif right_temp>=3:
+    elif right_temp>=5:
         right_temp=0
         print("go Right")
         second_part_flag=1
         turn_right_flag+=1
         turn_left_flag=0
-    elif left_temp>=5:
+    elif left_temp>=3:
         left_temp=0
         print("go Left")
         second_part_flag=1
@@ -190,32 +190,32 @@ def theta_value(origin_theta):#判斷斜率
       #  speed = 3000
     if big_turn_right==1:
         theta = -4+origin_theta
-        speed = 3200
+        speed = 3600
     elif big_turn_left==1:
         theta = 4+origin_theta
-        speed = 3200
+        speed = 3600
     else:
-        sp=[4000,4000,3800,3800,3700,3700,3600,3600,3600]
+        sp=[4200,4200,4000,4000,3900,3900,3800,3800,3800]
         th=[0,1,2,3,3,3,4,4,4]
         #walk straight
         if slope >= 0.9:
             theta = 5+origin_theta
-            speed = 3400
+            speed = 3600
         elif slope >= 0:
             speed = int(sp[math.floor(slope/0.1)])
             theta = int(th[math.floor(slope/0.1)])+origin_theta
         elif  slope <= -0.9:
             theta = -5+origin_theta
-            speed = 3400
+            speed = 3600
         else:
             speed = int(sp[math.floor(-slope/0.1)])
             theta = -int(th[math.floor(-slope/0.1)])+origin_theta
             if correct_walking_right==1:
                 theta -= 3
-                speed = 3000
+                speed = 3600
             elif correct_walking_left==1:
                 theta += 3
-                speed = 3000
+                speed = 3600
     return theta, speed, go_to_second_part_flag
 def calculate():#計算斜率
     cnt1=0
@@ -346,7 +346,7 @@ if __name__ == '__main__':
                             print('next flag:', next_stage_flag)
                             send.sendContinuousValue(speed,origin_Y,0,theta,0)
                         else:
-                            if arrow_center_y>=120:
+                            if arrow_center_y>=160:
                                 speed=2000
                                 i+=1
                                 if i>=5:
