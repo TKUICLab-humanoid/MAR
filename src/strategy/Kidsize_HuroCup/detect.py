@@ -92,9 +92,10 @@ if __name__ == "__main__":
                     
             tinference, tnms = model.get_last_inference_time()
             FPS = 1/(tinference+tnms)
-            cv2.imshow("vedio",image)
-            if cv2.waitKey(1)==ord('q'):
-                break
+            # 註解3行
+            # cv2.imshow("vedio",image)
+            # if cv2.waitKey(1)==ord('q'):
+                # break
         except rospy.ROSInterruptException:
             pass
 

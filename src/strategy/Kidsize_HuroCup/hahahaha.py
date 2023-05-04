@@ -7,10 +7,11 @@ import time
 # import cv2
 import math
 
+ORIGIN_SPEED = 200
 ORIGIN_THETA = 0
 HEAD_Y_HIGH = 1500
-SPEED_LIST = [3500, 3400, 3300, 3300, 3200, 3200, 3100, 3100, 3100, 3000]
-THETA_LIST = [0, 0, 0, 1, 1, 2, 2, 3, 4, 5]
+SPEED_LIST = [3300, 3200, 3200, 3100, 3100, 3000, 3000, 2900, 2900, 2800]
+THETA_LIST = [0, 1 , 1, 2, 2, 3, 3, 4, 4, 5]
 aaaa = rospy.init_node('talker', anonymous=True, log_level=rospy.DEBUG)
 send = Sendmessage()
 
@@ -100,11 +101,14 @@ class Mar:
         self.theta = 0 + ORIGIN_THETA
         rospy.logdebug(f'直走')
         self.speed_x = 2000
-        if 0 < send.yolo_X <= 140:
+        self.speed_y = 300
+        if 0 < send.yolo_X <= 130:
             self.theta = 5
+            self.speed_x = 1700
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
-        elif send.yolo_X >= 180:
+        elif send.yolo_X >= 190:
             self.theta = -5
+            self.speed_x = 1700
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
             self.yaw_calculate()
@@ -114,7 +118,8 @@ class Mar:
             elif self.yaw - self.yaw_temp < 0:
                 self.theta = 3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
-        send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
+        send.sendContinuousValue(self.speed_x, self.speed_y, 0, self.theta, 0)
+        rospy.logwarn(f'{self.yaw - self.yaw_temp}')
         if self.turn_now_flag:
             self.turn_now_flag = False
 
@@ -179,7 +184,7 @@ class Mar:
         elif self.variation < -0.4:
             self.theta = -4
             self.speed_x = -500
-            self.speed_y = 800
+            self.speed_y = 500
         #turn left 
         elif 0.4 >= self.variation > 0.1:
             self.speed_x = 0
@@ -188,7 +193,7 @@ class Mar:
         elif self.variation > 0.4:
             self.theta = 3
             self.speed_x = -500
-            self.speed_y = 500
+            self.speed_y = 800
         if self.arrow_cnt_times >= 5:
             self.first_arrow_flag = False
             self.yaw_temp = send.imu_value_Yaw
@@ -200,20 +205,20 @@ class Mar:
         if (self.line_up_y + self.line_down_y) / 2 > 180:
             if self.line_down_x > 220:
                 self.theta = -5
-                self.speed_x = 3000
+                self.speed_x = 2800
             elif self.line_down_x < 80:
                 self.theta = 5
-                self.speed_x = 3000
+                self.speed_x = 2800
             else:
                 self.line_status = 'arrow'#進入第二階段的指標，線在機器人螢幕的正下方
                 rospy.loginfo(f'line in image = {self.line_status}')
         else:                           #walk straight
             if self.line_down_x < 140 and abs(self.variation) < 0.3:
                 self.theta = 5
-                self.speed_x = 3000
+                self.speed_x = 2800
             elif self.line_down_x > 180 and abs(self.variation) < 0.3:
                 self.theta = -5
-                self.speed_x = 3000
+                self.speed_x = 2800
             # elif self.variation >= 0.9:
             #     self.theta = 5
             #     self.speed_x = 3000
@@ -229,7 +234,7 @@ class Mar:
 
             elif abs(self.variation) >= 0.9:
                 self.theta = 5
-                self.speed_x = 3000
+                self.speed_x = 2800
             elif abs(self.variation) >= 0:
                 self.speed_x = int(SPEED_LIST[math.floor(self.variation / 0.1)])
                 self.theta = int(THETA_LIST[math.floor(self.variation / 0.1)])
@@ -237,11 +242,12 @@ class Mar:
                 self.theta = -self.theta
             if (self.line_down_x + self.line_up_x) / 2 < 140 :
                 self.theta = 3 + self.theta
-                self.speed_x = 3000
+                self.speed_x = 2800
             elif (self.line_down_x + self.line_up_x) / 2 > 180:
                 self.theta = -3 + self.theta
-                self.speed_x = 3000
+                self.speed_x = 2800
             self.line_status = 'online'
+        self.speed_x = self.speed_x + ORIGIN_SPEED
         rospy.logdebug(f'speed = {self.speed_x}')
         rospy.logdebug(f'theta = {self.theta}')
 
@@ -341,7 +347,7 @@ class Mar:
                     # send.sendContinuousValue(self.speed_x, self.speed_y, 0, self.theta, 0)
                     send.sendHeadMotor(2, HEAD_Y_HIGH - 100, 50)
                 else:
-                    if send.yolo_Y >= 170:
+                    if send.yolo_Y >= 150:
                         self.speed_x = 2000
                         self.arrow_cnt_times += 1
                         if self.arrow_cnt_times >= 4:
@@ -356,6 +362,7 @@ class Mar:
             send.sendContinuousValue(self.speed_x, self.speed_y, 0, self.theta + ORIGIN_THETA, 0)             
         if not send.is_start:
             if self.status != 'First':
+                self.status = 'First'
                 self.initial()
                 time.sleep(0.1)
                 send.sendBodyAuto(0, 0, 0, 0, 1, 0)
