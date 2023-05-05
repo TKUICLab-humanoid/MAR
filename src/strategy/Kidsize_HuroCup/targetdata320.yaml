@@ -1,0 +1,5 @@
+train: /home/aa/yolov5/data/target320/train/images
+val: /home/aa/yolov5/data/target320/valid/images
+
+nc: 3
+names: ['left', 'right', 'stright']
