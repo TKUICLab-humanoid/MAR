@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 from rospy import Publisher
 from tku_msgs.msg import Interface,HeadPackage,SandHandSpeed,DrawImage,SingleMotorData,\
-SensorSet,ObjectList,LabelModelObjectList,RobotPos,SetGoalPoint,SoccerDataList,SensorPackage
+SensorSet,ObjectList,LabelModelObjectList,RobotPos,SetGoalPoint,SoccerDataList,SensorPackage,YoloData
 from std_msgs.msg import Int16,Bool
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -42,18 +42,25 @@ class Sendmessage:
         self.DIOValue = 0x00
         self.is_start = False
         self.time = 0
-        self.originimg=0
+        self.yolo_IoU = 0
+        self.yolo_Label = ''
+        self.yolo_XMin = 0
+        self.yolo_YMin = 0
+        self.yolo_XMax = 0
+        self.yolo_YMax = 0
         aaaa = rospy.init_node('talker', anonymous=True)
         object_list_sub = rospy.Subscriber("/Object/List",ObjectList, self.getObject)
         label_model_sub = rospy.Subscriber("/LabelModel/List",LabelModelObjectList, self.getLabelModel)
         #compress_image_sub = rospy.Subscriber("compress_image",Image, self.catchImage)
         #image_raw_sub = rospy.Subscriber("colormodel_image",Image, self.RawImage)
-        origin_image_sub = rospy.Subscriber("orign_image",Image, self.OriginImage)
+        #origin_image_sub = rospy.Subscriber("orign_image",Image, self.OriginImage)
         start_sub = rospy.Subscriber("/web/start",Bool, self.startFunction)
         DIO_ack_sub = rospy.Subscriber("/package/FPGAack",Int16, self.DIOackFunction)
         sensor_sub = rospy.Subscriber("/package/sensorpackage",SensorPackage, self.sensorPackageFunction)
 
-        
+
+        yolo_sub = rospy.Subscriber('highest/msg',YoloData, self.YoloFunction)
+
     def sendBodyAuto(self,x,y,z,theta,mode,sensor):	#步態啟動
         walkdata = Interface()
         walkdata.x = x
@@ -128,18 +135,19 @@ class Sendmessage:
         send = Sendmessage()
         while not rospy.is_shutdown():
             if send.Web == True:
-                send.sendSensorReset()
-                cv2.imshow("aaaaaa",send.rawimg)
-                cv2.waitKey(3)
-                print(send.Label_Model[33333])
-            
+               # send.sendSensorReset()
+                # cv2.imshow("aaaaaa",send.rawimg)
+                # cv2.waitKey(3)
+                # print(send.Label_Model[33333])
+                send.drawImageFunction(5,1,send.yolo_XMin,send.yolo_XMax,send.yolo_YMin,send.yolo_YMax,0,0,255)
+                print(send.yolo_Label)
             
     #def catchImage(self,msg):
     #    self.cvimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
     #def RawImage(self,msg):
     #    self.rawimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
-    def OriginImage(self,msg):
-        self.originimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
+    #def OriginImage(self,msg):
+    #    self.originimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
     def startFunction(self,msg):
         self.Web = msg.data
     def getLabelModel(self,msg):
@@ -172,9 +180,24 @@ class Sendmessage:
             self.is_start = False
         self.DIOValue = msg.data
     
+    def YoloFunction(self,msg):
+        self.yolo_Conf = msg.Conf
+        self.yolo_Label = msg.Label
+        self.yolo_XMin =int(msg.XMin)
+        self.yolo_YMin = int(msg.YMin)
+        self.yolo_XMax = int(msg.XMax)
+        self.yolo_YMax = int(msg.YMax)
+        self.yolo_Y = (self.yolo_YMin+self.yolo_YMax)/2
+        self.yolo_X = (self.yolo_XMin+self.yolo_XMax)/2
+
+        
+    
 if __name__ == '__main__':
+    # r = rospy.Rate(100)
     try:
-        aa = Sendmessage()
+        
+        aa = Sendmessage() 
         aa.strategy()
+        # r.sleep()
     except rospy.ROSInterruptException:
         pass
