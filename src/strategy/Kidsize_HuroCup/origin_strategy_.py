@@ -7,378 +7,379 @@ from Python_API import Sendmessage
 import time
 import cv2
 import math
-imgdata = [[None for high in range(240)]for wight in range(320)]
-start = True
-class MAR_API:
-    def __init__(self):
+IMGDATA = [[None for high in range(240)]for wight in range(320)]     
+ORIGIN_THETA = 0
+ORIGIN_Y = 0
+#第一段的速度變化
+SPEED_CHANGE = [4000, 4000, 3800, 3800, 3700, 3700, 3600, 3600, 3600] 
+#第一段的角度變化
+THETA_CHANGE = [0, 1, 2, 2, 3, 3, 3, 4, 4]    
+send = Sendmessage()
+
+class Marathon:
+    def __init__(self):     
+        #imu完成左轉、右轉-----------------------------------------------------
+        self.finish_left_flag = False       
+        self.finish_right_flag = False      
+        #arrow_train/judge_the_arrow---------------------------------------------             
+        #成功判斷箭頭計數暫存
+        self.straight_number = 0              
+        self.right_number = 0 
+        self.left_number = 0          
+        #face_the_arrow---------------------------------------------------
+        self.positive_arrow_times = 0       #重複判斷對正箭頭
+        #main------------------------------------------------------------------ 
+        self.turn_now_flag = False          #找箭頭
+        #----------------------------------------------------------------------
+        self.initial()
+
+    #初始化(撥指撥)
+    def initial(self):
+        #成功判斷多次右轉、左轉
+        self.is_right_flag = False        
+        self.is_left_flag = False 
+        #步態初始化
+        self.start = True
         self.yaw_offset = 0
-MAR = MAR_API()
-def initial():
-    global i, cnt, speed, straight_temp, right_temp, left_temp, turn_left_flag, turn_now_flag, turn_right_flag, finish_turn_left_flag, finish_turn_right_flag, second_part_flag, next_stage_flag, go_to_second_part_flag, origin_theta, origin_Y
-    i=0
-    speed=0
-    straight_temp=0 #成功判斷箭頭暫存
-    right_temp=0 
-    left_temp=0 
-    turn_right_flag=0#成功判斷右轉
-    turn_left_flag=0#成功判斷左轉
-    finish_turn_left_flag=0#完成左轉
-    finish_turn_right_flag=0#完成右轉
-    turn_now_flag=0
-#----------------------------------------------------------------------
-    #第二階段旗標
-    second_part_flag=1#成功判斷銀幕內有箭頭
-    go_to_second_part_flag=1#線段只有在銀幕下方
-    next_stage_flag=1 #修正是否正對箭頭
-#----------------------------------------------------------------------
-    #步態初始化
-    origin_theta=0
-    origin_Y=0
-    MAR.yaw_offset = 0
+        self.yaw = 0
+        self.speed = 0                      #初始速度
+        self.theta = 0
+        self.x_division_y = 0
+        #imu------------------------------------------------------------------
+        self.finish_left_flag = False       #完成左轉
+        self.finish_right_flag = False      #完成右轉            
+        #change_speed_theta----------------------------------------------------
+        self.correct_walking_left = False   #線在機器人左邊
+        self.correct_walking_right = False  #線在機器人右邊
+        self.big_turn_right = False         #往右大轉
+        self.big_turn_left = False          #往左大轉
+        #----------------------------------------------------------------------
+        #第二階段箭頭
+        self.see_arrow_flag = False         #成功判斷銀幕內有箭頭 #已改
+        self.line_bottom_flag = False       #線段只有在銀幕下方
+        self.enter_arrow_flag = False        #進入第二段 #已改
+        #----------------------------------------------------------------------
 
-def imu_right(flag,origin_theta,origin_Y):#90度右轉
-    flag=0
-    yaw = send.imu_value_Yaw-MAR.yaw_offset
-    print('trun right')
-    time.sleep(0.1)
-    send.sendContinuousValue(2100,origin_Y,0,-5+origin_theta,0)
-    send.sendHeadMotor(2,2750,50)
-    if  yaw < -85:#成功右轉90度
-        print("end")
-        MAR.yaw_offset = send.imu_value_Yaw
-        # send.sendSensorReset()
-        flag=1
-    return flag
-def imu_left(flag,origin_theta,origin_Y):#90度左轉
-    flag=0
-    yaw = send.imu_value_Yaw-MAR.yaw_offset
-    print('trun left')
-    time.sleep(0.1)
-    send.sendContinuousValue(2300,origin_Y,0,5+origin_theta,0)
-    send.sendHeadMotor(2,2750,50)
-    if  yaw > 80:#成功左轉90度
-        print("end")
-        MAR.yaw_offset = send.imu_value_Yaw
-        # send.sendSensorReset()
-        flag=1
-    return flag
-def imu_go(origin_theta,arrow_center_x):#直走
-    theta=origin_theta
-    print("go go go!")
-    time.sleep(0.1)
-    yaw = send.imu_value_Yaw-MAR.yaw_offset
-    speed = 3000
-    if 0<arrow_center_x<=140:
-        theta=4
-        send.sendContinuousValue(speed,origin_Y,0,theta+origin_theta,0)
-    elif arrow_center_x>=180:
-        theta=-4
-        send.sendContinuousValue(speed,origin_Y,0,theta+origin_theta,0)
-    else:
-        if  yaw > 3:
-            theta = -2+origin_theta
-            print('right')
-            time.sleep(0.2)
-        elif yaw < -3:
-            theta = 2+origin_theta
-            print('left')
-            time.sleep(0.2)
-    return speed, theta
-def camera(straight_temp, right_temp, left_temp):#判斷箭頭
-    #cap = cv2.VideoCapture(7)
-    center_y=0
-    center_x=0
-    STRAIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Straight.xml")
-    RIGHT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Right.xml")
-    LEFT_casecade = cv2.CascadeClassifier("/home/iclab/Desktop/MAR/src/strategy/Parameter/cascade2Left.xml")
-    #ret, frame = cap.read()
-    frame = send.originimg
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray = cv2.equalizeHist(gray)
-    STRAIGHT= STRAIGHT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
-    RIGHT= RIGHT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
-    LEFT= LEFT_casecade.detectMultiScale(gray,1.1, 5,0,(10,10))
-    if len(STRAIGHT)>0:
-        for a in STRAIGHT:  # 單獨框出每一張人臉
-            x, y, w, h = a
-            cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
-        straight_temp+=1
-        right_temp=0
-        left_temp=0
-        center_y=y+h/2 #計算箭頭的y軸位置
-        center_x=x+w/2
-        # print("straight")
-    elif len(RIGHT)>0:
-        for a in RIGHT:  # 單獨框出每一張人臉
-            x, y, w, h = a
-            cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
-        straight_temp=0
-        right_temp+=1
-        left_temp=0
-        center_y=y+h/2 #計算箭頭的y軸位置
-        center_x=x+w/2
-        # print("right")
-    elif len(LEFT)>0:
-        for a in LEFT:  # 單獨框出每一張人臉
-            x, y, w, h = a
-            cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-        send.drawImageFunction(1,1,x,x+w,y,y+h,255,0,0)
-        straight_temp=0
-        right_temp=0
-        left_temp+=1
-        center_y=y+h/2#計算箭頭的y軸位置
-        center_x=x+w/2
-        # print("left")
-    
-    return straight_temp, right_temp, left_temp, center_y, center_x
+    #修正yaw值(不超過180度)
+    def get_yaw(self):  
+        if (self.yaw - self.yaw_offset) <= -200:
+            self.yaw_offset -= 360
+        elif (self.yaw - self.yaw_offset) >= 200:
+            self.yaw_offset += 360
+        self.yaw = send.imu_value_Yaw - self.yaw_offset
+        rospy.logwarn(f"Yaw = {self.yaw}")
 
-def correct_go_to_arrow(origin_theta,i):
-    slope , go_to_second_part_flag, correct_walking_right, correct_walking_left, big_turn_right, big_turn_left= calculate()
-    theta = 0
-    speed = -500
-    print('slope:', slope)
-    if -0.05 < slope < 0.05:
-        theta = 0+origin_theta
-        i+=1
-    #turn right
-    elif -0.4 < slope < -0.05:
-        theta = -3+origin_theta
-    elif slope < -0.4:
-        theta = -4+origin_theta
-        speed = 0
-    #turn left 
-    elif 0.4 > slope > 0.05:
-        theta = 3+origin_theta
-    elif slope > 0.4:
-        theta = 4+origin_theta
-        speed = 0
+    #90度右轉
+    def turn_right_ninety(self):    #已改
+        rospy.loginfo(f'箭頭右轉')
+        send.sendContinuousValue(2100, ORIGIN_Y, 0, -5 + ORIGIN_THETA, 0)
+        send.sendHeadMotor(2, 2600, 50)
+        time.sleep(0.01)
+        self.get_yaw()
+        if  self.yaw < -90:         #成功右轉90度後停止
+            rospy.loginfo(f"右轉結束")
+            rospy.loginfo(f"====================")
+            self.yaw_offset = send.imu_value_Yaw 
+            # send.sendSensorReset()
+            self.finish_right_flag = True
 
-    return theta, speed, i
+    #90度左轉
+    def turn_left_ninety(self):     #已改
+        self.get_yaw()
+        rospy.loginfo(f'箭頭左轉')
+        send.sendContinuousValue(2100, ORIGIN_Y, 0, 5 + ORIGIN_THETA ,0)
+        send.sendHeadMotor(2, 2600, 50)
+        time.sleep(0.01)
+        if  self.yaw > 80:          #成功左轉90度
+            rospy.loginfo(f"左轉結束")
+            rospy.loginfo(f"====================")
+            self.yaw_offset = send.imu_value_Yaw
+            # send.sendSensorReset()
+            self.finish_left_flag = True
 
-def arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag):
-    if straight_temp>=3:#成功連續判斷20次
-        straight_temp=0
-        print("go Straight")
-        second_part_flag=1
-        turn_right_flag=0
-        turn_left_flag=0
-    elif right_temp>=3:
-        right_temp=0
-        print("go Right")
-        second_part_flag=1
-        turn_right_flag+=1
-        turn_left_flag=0
-    elif left_temp>=3:
-        left_temp=0
-        print("go Left")
-        second_part_flag=1
-        turn_right_flag=0
-        turn_left_flag+=1
-    return second_part_flag, turn_right_flag, turn_left_flag
-def theta_value(origin_theta):#判斷斜率
-    slope , go_to_second_part_flag, correct_walking_right, correct_walking_left, big_turn_right, big_turn_left= calculate()
-    theta=0
-    speed=0
-    if correct_walking_right==1:
-        theta = -4+origin_theta
-        speed = 2800
-    elif correct_walking_left==1:
-        theta = 4+origin_theta
-        speed = 2800
-    elif big_turn_right==1:
-        theta = -4+origin_theta
-        speed = 2800
-    elif big_turn_left==1:
-        theta = 4+origin_theta
-        speed = 2800
-    else:
-        sp=[3000,3000,2900,2800,2800,2800,2700,2700,2600]
-        th=[0,1,1,2,2,2,3,4,4]
-        #walk straight
-        if slope >= 0.9:
-            theta = 4+origin_theta
-            speed = 2800
-        elif slope>=0:
-            speed = int(sp[math.floor(slope/0.1)])
-            theta = int(th[math.floor(slope/0.1)])+origin_theta
-        elif  slope <= -0.9:
-            theta = -4+origin_theta
-            speed = 2800
+    #直走
+    def go_straight(self):          #已改
+        self.theta = ORIGIN_THETA
+        rospy.loginfo(f"箭頭直走!")
+        self.get_yaw()
+        self.speed = 3600
+        if 0 < send.yolo_X <= 140: #大偏離箭頭修正
+            self.theta = 4
+            rospy.loginfo(f"箭頭向左修正")
+            rospy.loginfo(f"====================")
+            send.sendContinuousValue(self.speed, ORIGIN_Y, 0, self.theta + ORIGIN_THETA, 0)
+        elif send.yolo_X >= 180:
+            self.theta = -4
+            rospy.loginfo(f"箭頭向右修正")
+            rospy.loginfo(f"====================")
+            send.sendContinuousValue(self.speed, ORIGIN_Y, 0, self.theta + ORIGIN_THETA, 0)   #副涵式結束後也有一個sendContinuousValue,是不是留一個就好？
         else:
-            speed = int(sp[math.floor(-slope/0.1)])
-            theta = -int(th[math.floor(-slope/0.1)])+origin_theta
-    return theta, speed, go_to_second_part_flag
-def calculate():#計算斜率
-    cnt1=0
-    cnt2=0
-    cnt3=0
-    total_x1=0
-    total_y1=0
-    total_x2=0
-    total_y2=0
-    total_x3=0
-    total_y3=0
-    center_x1=0
-    center_y1=0
-    center_x2=0
-    center_y2=0
-    center_x3=0
-    center_y3=0
-    slope=0
-    go_to_second_part_flag=0
-    correct_walking_left=0
-    correct_walking_right=0
-    big_turn_right=0
-    big_turn_left=0
-    for high in range(240):
-        for wight in range(320):
-            imgdata[wight][high]=send.Label_Model[high*320+wight]
-            if 60 <= high < 110:
-                if imgdata[wight][high] != 0:
-                    total_x1+=wight
-                    total_y1+=high
-                    cnt1+=1
-            elif 110 <= high < 210:
-                if imgdata[wight][high] != 0:
-                    total_x2+=wight
-                    total_y2+=high
-                    cnt2+=1
-            elif high >=210 :
-                if imgdata[wight][high] != 0:
-                    total_x3+=wight
-                    total_y3+=high
-                    cnt3+=1
-    send.drawImageFunction(3, 0, 0, 320, 60, 60, 138, 43, 226)
-    send.drawImageFunction(4, 0, 0, 320, 110, 110, 138, 43, 226)
-    send.drawImageFunction(5, 0, 0, 320, 210, 210, 138, 43, 226)
-    if cnt1 > 50:#去除雜訊點
-        center_x1=total_x1/cnt1
-        center_y1=total_y1/cnt1
-    if cnt2 > 50:
-        center_x2=total_x2/cnt2
-        center_y2=total_y2/cnt2
-    if cnt3 > 50:
-        center_x3=total_x3/cnt3
-        center_y3=total_y3/cnt3
-    center_x1=int(center_x1)
-    center_y1=int(center_y1)
-    center_x2=int(center_x2)
-    center_y2=int(center_y2)
-    center_x3=int(center_x3)
-    center_y3=int(center_y3)
-    if center_y2-center_y3==0 or  center_y1-(center_y2+center_y3)/2==0: #找不到線
-        print("None")
-        slope = 0
-    elif center_x1==0 and center_x2==0 and center_y1==0 and center_y2==0:#機器人偏移或是已經要進入第二階段
-        if center_x3 > 240:
-            big_turn_right=1
-        elif center_x3 < 80:
-            big_turn_left=1
-    else:#計算斜率
-        if center_x3 < 120 and center_x2 < 120:
-            correct_walking_left=1
-        elif center_x3 > 200 and center_x2 > 200:
-            correct_walking_right=1
-        if center_x1==0 and center_y1==0:#first part don't have line
-            slope = (center_x3-center_x2)/(center_y3-center_y2)
-            send.drawImageFunction(2,0,center_x2,center_x3,center_y2,center_y3,0,0,0)
-            go_to_second_part_flag=1#進入第二階段的指標，線在機器人螢幕的正下方
-        elif center_x3==0 and center_y3==0:
-            slope = (center_x2-center_x1)/(center_y2-center_y1)
-            send.drawImageFunction(2,0,center_x1,center_x2,center_y1,center_y2,0,0,0)
-        else:
-            slope = (center_x3-(center_x1+center_x2)/2)/(center_y3-(center_y1+center_y2)/2)
-            h=int((center_x1+center_x2)/2)
-            i=int((center_y1+center_y2)/2)
-            send.drawImageFunction(2,0,center_x3,h,center_y3,i,0,0,0)
-    #print(slope)
-    return slope , go_to_second_part_flag , correct_walking_right, correct_walking_left, big_turn_right, big_turn_left
+            if  self.yaw > 8:       #第一段直線的偏離修正
+                self.theta = -2 + ORIGIN_THETA
+                rospy.loginfo(f"直線向右修正")
+                rospy.loginfo(f"====================")
+            elif self.yaw < -8:
+                self.theta = 2 + ORIGIN_THETA
+                rospy.loginfo(f"直線向左修正")
+                rospy.loginfo(f"====================")
 
+    #箭頭訓練
+    def arrow_train(self):       
+        send.drawImageFunction(1, 1, send.yolo_XMin, send.yolo_XMax, send.yolo_YMin, send.yolo_YMax, 255, 0, 0)
+        rospy.loginfo(f"X = {send.yolo_X}")
+        rospy.loginfo(f"Y = {send.yolo_Y}")
+        rospy.loginfo(f"labei = {send.yolo_Label}")     #不知道?是判斷到的箭頭名稱咪?????QAQ
+        if send.yolo_Label != "none":
+            if send.yolo_Label == "straight":
+                self.straight_number += 1
+                self.right_number = 0
+                self.left_number = 0
+            elif send.yolo_Label == "left":
+                self.straight_number = 0
+                self.right_number = 0
+                self.left_number += 1
+            elif send.yolo_Label == "right":
+                self.straight_number = 0
+                self.right_number += 1
+                self.left_number = 0
+
+    #第二段箭頭對正
+    def face_the_arrow(self):  #已改
+        self.calculate_center_xy()
+        self.theta = 0
+        self.speed = -500
+        rospy.loginfo(f"斜率 = {self.x_division_y}")
+        if -0.05 <= self.x_division_y <= 0.05:       #!!!!!這邊這樣寫會有bug,當x_division_y=0.05就會跳過去#已改
+            self.theta = 0 + ORIGIN_THETA
+            self.positive_arrow_times += 1     #重複確認對正箭頭   #!!!!!flag 只會有true和false #已改
+        #往右
+        elif -0.4 < self.x_division_y < -0.05:
+            self.theta = -3 + ORIGIN_THETA
+        elif self.x_division_y < -0.4:
+            self.theta = -4 + ORIGIN_THETA
+            self.speed = 0
+        #往左
+        elif 0.4 > self.x_division_y > 0.05:
+            self.theta = 3 + ORIGIN_THETA
+        elif self.x_division_y > 0.4:
+            self.theta = 4 + ORIGIN_THETA
+            self.speed = 0
+
+    #判斷出箭頭(一定會判斷出某個箭頭)
+    def judge_the_arrow(self):   
+            if self.straight_number >= 5:       #成功連續判斷5次
+                self.straight_number = 0
+                rospy.loginfo(f"直走箭頭判斷成功")
+                self.see_arrow_flag = True
+                #self.is_left_flag = False (我覺得不用?)
+            elif self.right_number >= 3:
+                self.right_number = 0
+                rospy.loginfo(f"右轉箭頭判斷成功")
+                self.see_arrow_flag = True
+                self.is_right_flag = True
+                #self.is_left_flag = False (我覺得不用?)
+            elif self.left_number >= 5:
+                self.left_number = 0
+                rospy.loginfo(f"左轉箭頭判斷成功")
+                self.see_arrow_flag = True
+                self.is_left_flag = True
+
+    #第一段的斜率對應機器人速度、角度
+    def change_speed_theta(self):
+        self.calculate_center_xy()
+        #線在視窗最下面時(大轉的修正)
+        if self.big_turn_right:
+            self.theta = -4 + ORIGIN_THETA
+            self.speed = 3200
+        elif self.big_turn_left:
+            self.theta = 4 + ORIGIN_THETA
+            self.speed = 3200
+        else:
+            
+            #直走
+            if self.x_division_y >= 0.9:
+                self.theta = 5 + ORIGIN_THETA
+                self.speed = 3400
+            elif self.x_division_y >= 0:
+                self.speed = int(SPEED_CHANGE[math.floor(self.x_division_y / 0.1)])
+                self.theta = int(THETA_CHANGE[math.floor(self.x_division_y / 0.1)]) + ORIGIN_THETA
+            elif  self.x_division_y <= -0.9:
+                self.theta = -5 + ORIGIN_THETA
+                self.speed = 3400
+            else:
+                self.speed = int(SPEED_CHANGE[math.floor(-self.x_division_y / 0.1)])
+                self.theta = -int(THETA_CHANGE[math.floor(-self.x_division_y / 0.1)]) + ORIGIN_THETA
+                if self.correct_walking_right:
+                    self.theta -= 3
+                    self.speed = 3000
+                elif self.correct_walking_left:
+                    self.theta += 3
+                    self.speed = 3000
+
+    #計算xy中心位置
+    def calculate_center_xy(self):    
+        cnt1 = 0
+        cnt2 = 0
+        total_x1 = 0
+        total_y1 = 0
+        total_x2 = 0
+        total_y2 = 0
+        center_x1 = 0
+        center_y1 = 0
+        center_x2 = 0
+        center_y2 = 0
+        xmin = 320
+        xmax = 0
+        ymin = 240
+        ymax = 0
+        for i in range(8):
+            for j in range(send.color_mask_subject_cnts[i]):
+                if send.color_mask_subject_size[i][j] > 1000:
+                    if xmin > send.color_mask_subject_XMin[i][j]:
+                        xmin = send.color_mask_subject_XMin[i][j]
+                    if xmax < send.color_mask_subject_XMax[i][j]:
+                        xmax = send.color_mask_subject_XMax[i][j]
+                    if ymin > send.color_mask_subject_YMin[i][j]:
+                        ymin = send.color_mask_subject_YMin[i][j]
+                    if ymax < send.color_mask_subject_YMax[i][j]:
+                        ymax = send.color_mask_subject_YMax[i][j]
+                    if ymin < 50:
+                        ymin = 50
+        if xmax != 0 :
+            for high in range(ymin, ymax):
+                for wight in range(xmin, xmax):
+                    cen_y = (ymin + ymax) / 2
+                    if high < cen_y:
+                        if send.Label_Model[high * 320 + wight] != 0:
+                            total_x1 += wight
+                            total_y1 += high
+                            cnt1 += 1
+                    else: 
+                        if send.Label_Model[high*320 + wight] != 0:
+                            total_x2 += wight
+                            total_y2 += high
+                            cnt2 += 1
+            center_x1 = int(total_x1 / cnt1)
+            center_y1 = int(total_y1 / cnt1)
+            center_x2 = int(total_x2 / cnt2)   #已改
+            center_y2 = int(total_y2 / cnt2)   #已改
+            self.x_division_y = (center_x1 - center_x2) / (center_y1 - center_y2)      #已改
+            send.drawImageFunction(5, 1, xmin, xmax, ymin, ymax, 0, 0, 0)
+            send.drawImageFunction(2, 0, center_x1, center_x2, center_y1, center_y2, 0, 0, 0)
+            rospy.loginfo(f"x%y = {self.x_division_y}")   #!!!!!print記得改掉 #已改
+        else :
+            self.x_division_y = 0
+        #機器人大偏離或是已經要進入第二階段(線在視窗下方):
+        if ymin > 150:
+            if center_x2 > 240:
+                self.big_turn_right = True
+            elif center_x2 < 80:
+                self.big_turn_left = True
+            else:
+                self.line_bottom_flag = True
+        else:
+            if(center_x1 + center_x2) / 2 > 200:
+                self.correct_walking_right = True
+            elif (center_x1 + center_x2) / 2 < 120:
+                self.correct_walking_left = True
+
+    #開啟第二段
+    def dial(self): 
+        if send.DIOValue != 24:
+            self.see_arrow_flag = True         #成功判斷銀幕內有箭頭 #已改
+            self.line_bottom_flag = True       #線段只有在銀幕下方
+            self.enter_arrow_flag = True        #進入第二段 #已改
+
+    #主程式
+    def main(self):
+        self.dial()
+        if send.is_start: 
+            #rospy.loginfo(f"{start}")
+            if self.start:
+                #rospy.loginfo(f"{self.start}")
+                self.initial()
+                send.sendHeadMotor(2, 2600, 50)
+                send.sendHeadMotor(1, 2048, 50)
+                time.sleep(0.01)
+                send.sendSensorReset()
+                send.sendBodyAuto(0, 0, 0, 0, 1, 0)
+                self.start = False  
+            else:
+                #判斷是否進入第二階段(看到箭頭、線在視窗下方)
+                if self.see_arrow_flag and self.line_bottom_flag:
+                    if not self.turn_now_flag:              #找箭頭
+                        self.arrow_train()
+                        self.judge_the_arrow()
+                    if not self.enter_arrow_flag:            #進入第二段
+                        send.sendHeadMotor(2, 2600, 50)       #已改
+                        time.sleep(0.01)
+                        self.face_the_arrow()
+                        if self.positive_arrow_times >= 5:         #多次判斷有正對第一個箭頭
+                            self.enter_arrow_flag = True
+                            self.turn_now_flag = True
+                            # send.sendSensorReset()
+                            self.yaw_offset = send.imu_value_Yaw
+                            self.positive_arrow_times = 0
+                            send.sendHeadMotor(2, 2600, 50)
+                            time.sleep(0.01)
+                        rospy.loginfo(f"對正第一個箭頭 = {self.enter_arrow_flag}")
+                        send.sendContinuousValue(self.speed, ORIGIN_Y, 0, self.theta, 0)
+                    else:
+                        if send.yolo_Y >= 200:
+                            self.speed = 2000
+                            self.positive_arrow_times += 1     
+                            if self.positive_arrow_times >= 5:     #多次判斷有正對箭頭
+                                self.turn_now_flag = True
+                                self.positive_arrow_times = 0
+                            rospy.loginfo(f"對正箭頭 = {self.turn_now_flag}")
+                            
+                        #多次成功判斷右轉
+                        if self.is_right_flag and self.turn_now_flag:
+                            self.turn_right_ninety()
+                            if self.finish_right_flag:#完成90度右轉判斷旗標歸零
+                                send.sendHeadMotor(2, 2600, 50)
+                                time.sleep(0.01)
+                                self.is_right_flag = False
+                                self.finish_right_flag = False
+                                self.turn_now_flag = False
+
+                        #多次成功判斷左轉
+                        elif self.is_left_flag and self.turn_now_flag:
+                            self.turn_left_ninety()
+                            if self.finish_left_flag:#完成90度左轉判斷旗標歸零
+                                send.sendHeadMotor(2, 2600, 50)
+                                time.sleep(0.01)
+                                self.is_left_flag = False
+                                self.finish_left_flag = False
+                                self.turn_now_flag = False
+                        else:#沒有任何判斷就直走
+                            self.go_straight()                    
+                            send.sendContinuousValue(self.speed, ORIGIN_Y, 0, self.theta, 0)
+                            if self.turn_now_flag:
+                                self.turn_now_flag = False               
+                else:
+                    #第一段
+                    self.change_speed_theta()
+                    #判斷是否有箭頭(下面那行)
+                    self.arrow_train()
+                    self.judge_the_arrow()
+                    rospy.loginfo(f"角度：{self.theta}")
+                    rospy.loginfo(f"速度：{self.speed}")
+                    rospy.loginfo(f"====================")
+                    send.sendContinuousValue(self.speed, ORIGIN_Y, 0, self.theta, 0)
+        if not send.is_start:
+            if not self.start:    #已改
+                self.initial()
+                time.sleep(0.01)
+                send.sendBodyAuto(0, 0, 0, 0, 1, 0)
+                self.start = True
+            
 if __name__ == '__main__':
     try:
-        send = Sendmessage()
-        r=rospy.Rate(5)
+        mar = Marathon()
+        r = rospy.Rate(30)       #5Hz
         while not rospy.is_shutdown():
-            if send.is_start == True:
-                if start == True:
-                    initial()
-                    send.sendHeadMotor(2,2600,50)
-                    time.sleep(0.5)
-                    send.sendHeadMotor(1,2048,50)
-                    time.sleep(0.5)
-                    send.sendSensorReset()
-                    time.sleep(0.5)
-                    send.sendBodyAuto(0,0,0,0,1,0)
-                    start=False
-                else:
-                    if second_part_flag==1 and go_to_second_part_flag==1:#判斷是否有箭頭與是否要進入第二階段
-                        if turn_now_flag==0:
-                            straight_temp, right_temp, left_temp, arrow_center_y, arrow_center_x=camera(straight_temp, right_temp, left_temp)
-                            second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
-                        print('Y:', arrow_center_y)
-                        print('X:', arrow_center_x)
-                        if next_stage_flag==0:
-                            send.sendHeadMotor(2,2700,50)
-                            theta, speed, i=correct_go_to_arrow(origin_theta,i)
-                            if i>=5:
-                                next_stage_flag=1
-                                # send.sendSensorReset()
-                                MAR.yaw_offset = send.imu_value_Yaw
-                                i=0
-                                send.sendHeadMotor(2,2600,50)
-                                turn_now_flag=1
-                            print('next flag:', next_stage_flag)
-                            send.sendContinuousValue(speed,origin_Y,0,theta,0)
-                        else:
-                            if arrow_center_y>=100:
-                                speed=2000
-                                i+=1
-                                if i>=5:
-                                    turn_now_flag=1
-                                    i=0
-                            #print(turn_now_flag)
-                            if turn_right_flag>=1 and turn_now_flag==1:#多次成功判斷右轉與判斷箭頭在銀幕下方
-                                finish_turn_right_flag=imu_right(finish_turn_right_flag,origin_theta,origin_Y)
-                                if finish_turn_right_flag==1:#完成90度右轉判斷旗標歸零
-                                    send.sendHeadMotor(2,2600,50)
-                                    time.sleep(0.2)
-                                    turn_right_flag=0
-                                    finish_turn_right_flag=0
-                                    turn_now_flag=0
-
-
-                            elif turn_left_flag>=1 and turn_now_flag==1:#多次成功判斷左轉與判斷箭頭在銀幕下方
-                                finish_turn_left_flag=imu_left(finish_turn_left_flag,origin_theta,origin_Y)
-                                if finish_turn_left_flag==1:#完成90度左轉判斷旗標歸零
-                                    send.sendHeadMotor(2,2600,50)
-                                    time.sleep(0.2)
-                                    turn_left_flag=0
-                                    finish_turn_left_flag=0
-                                    turn_now_flag=0
-                            else:#沒有任何判斷就直走
-                                speed, theta=imu_go(origin_theta,arrow_center_x)                    
-                                send.sendContinuousValue(speed,origin_Y,0,theta,0)
-                            
-                                if turn_now_flag == 1:
-                                    turn_now_flag=0
-                                    
-                    else:
-                        theta, speed, go_to_second_part_flag=theta_value(origin_theta)
-                        straight_temp, right_temp, left_temp, arrow_center_y, arrow_center_x=camera(straight_temp, right_temp, left_temp)#判斷是否有箭頭
-                        second_part_flag, turn_right_flag, turn_left_flag=arrow_flag(straight_temp, right_temp, left_temp, second_part_flag, turn_right_flag, turn_left_flag)
-                        #print('line in camera bottom : ', go_to_second_part_flag)
-                        #print('arrow ok : ', second_part_flag)
-                        print('角度：', theta)
-                        print('速度：', speed)
-                        time.sleep(0.1)
-                        send.sendContinuousValue(speed,origin_Y,0,theta,0)
-            if send.is_start == False:
-                if start == False:
-                    initial()
-                    send.sendBodyAuto(0,0,0,0,1,0)
-                    start=True
+            mar.main() 
             r.sleep()
     except rospy.ROSInterruptException:
         pass
