@@ -101,7 +101,7 @@ class Mar:
         self.theta = 0 + ORIGIN_THETA
         rospy.logdebug(f'直走')
         self.speed_x = 2000
-        self.speed_y = 300
+        self.speed_y = 0
         if 0 < send.yolo_X <= 130:
             self.theta = 5
             self.speed_x = 1700
@@ -145,7 +145,7 @@ class Mar:
                 self.arrow_straight_temp = 0
                 self.arrow_right_temp += 1
                 self.arrow_left_temp = 0
-            if self.arrow_straight_temp >= 5:#成功連續判斷20次
+            if self.arrow_straight_temp >= 10:#成功連續判斷20次
                 self.arrow_straight_temp = 0
                 rospy.logdebug(f'go Straight')
                 self.arrow_flag = True
@@ -204,44 +204,25 @@ class Mar:
     def theta_value(self):#判斷斜率
         if (self.line_up_y + self.line_down_y) / 2 > 180:
             if self.line_down_x > 220:
-                self.theta = -5
+                self.theta = -6
                 self.speed_x = 2800
             elif self.line_down_x < 80:
-                self.theta = 5
+                self.theta = 7
                 self.speed_x = 2800
             else:
                 self.line_status = 'arrow'#進入第二階段的指標，線在機器人螢幕的正下方
                 rospy.loginfo(f'line in image = {self.line_status}')
         else:                           #walk straight
-            if self.line_down_x < 140 and abs(self.variation) < 0.3:
-                self.theta = 5
-                self.speed_x = 2800
-            elif self.line_down_x > 180 and abs(self.variation) < 0.3:
-                self.theta = -5
-                self.speed_x = 2800
-            # elif self.variation >= 0.9:
-            #     self.theta = 5
-            #     self.speed_x = 3000
-            # elif self.variation >= 0:
-            #     self.speed_x = int(SPEED_LIST[math.floor(self.variation / 0.1)])
-            #     self.theta = int(THETA_LIST[math.floor(self.variation / 0.1)])
-            # elif  self.variation <= -0.9:
-            #     self.theta = -5
-            #     self.speed_x = 3000
-            # else:
-            #     self.speed_x = int(SPEED_LIST[math.floor(-self.variation / 0.1)])
-            #     self.theta = -int(THETA_LIST[math.floor(-self.variation / 0.1)])
-
-            elif abs(self.variation) >= 0.9:
-                self.theta = 5
+            if abs(self.variation) >= 0.9:
+                self.theta = 7
                 self.speed_x = 2800
             elif abs(self.variation) >= 0:
                 self.speed_x = int(SPEED_LIST[math.floor(self.variation / 0.1)])
-                self.theta = int(THETA_LIST[math.floor(self.variation / 0.1)])
+                self.theta = int(THETA_LIST[math.floor(self.variation / 0.1)]) + 2
             if self.variation < 0:
-                self.theta = -self.theta
+                self.theta = -self.theta + 2
             if (self.line_down_x + self.line_up_x) / 2 < 140 :
-                self.theta = 3 + self.theta
+                self.theta = 4 + self.theta
                 self.speed_x = 2800
             elif (self.line_down_x + self.line_up_x) / 2 > 180:
                 self.theta = -3 + self.theta
