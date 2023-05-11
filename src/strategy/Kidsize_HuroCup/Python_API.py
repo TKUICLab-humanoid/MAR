@@ -48,7 +48,7 @@ class Sendmessage:
         self.yolo_YMin = 0
         self.yolo_XMax = 0
         self.yolo_YMax = 0
-        aaaa = rospy.init_node('talker', anonymous=True)
+        #aaaa = rospy.init_node('talker', anonymous=True)
         object_list_sub = rospy.Subscriber("/Object/List",ObjectList, self.getObject)
         label_model_sub = rospy.Subscriber("/LabelModel/List",LabelModelObjectList, self.getLabelModel)
         #compress_image_sub = rospy.Subscriber("compress_image",Image, self.catchImage)

@@ -15,6 +15,7 @@ SPEED_CHANGE = [4000, 4000, 3800, 3800, 3700, 3700, 3600, 3600, 3600]
 #第一段的角度變化
 THETA_CHANGE = [0, 1, 2, 2, 3, 3, 3, 4, 4]    
 send = Sendmessage()
+aaaa = rospy.init_node('talker', anonymous=True, log_level=rospy.WARN)
 
 class Marathon:
     def __init__(self):     
@@ -126,8 +127,8 @@ class Marathon:
     #箭頭訓練
     def arrow_train(self):       
         send.drawImageFunction(1, 1, send.yolo_XMin, send.yolo_XMax, send.yolo_YMin, send.yolo_YMax, 255, 0, 0)
-        rospy.loginfo(f"X = {send.yolo_X}")
-        rospy.loginfo(f"Y = {send.yolo_Y}")
+        rospy.loginfo(f"arrow_X = {send.yolo_X}")
+        rospy.loginfo(f"arrow_Y = {send.yolo_Y}")
         rospy.loginfo(f"labei = {send.yolo_Label}")     #不知道?是判斷到的箭頭名稱咪?????QAQ
         if send.yolo_Label != "none":
             if send.yolo_Label == "straight":
@@ -209,12 +210,14 @@ class Marathon:
             else:
                 self.speed = int(SPEED_CHANGE[math.floor(-self.x_division_y / 0.1)])
                 self.theta = -int(THETA_CHANGE[math.floor(-self.x_division_y / 0.1)]) + ORIGIN_THETA
-                if self.correct_walking_right:
-                    self.theta -= 3
-                    self.speed = 3000
-                elif self.correct_walking_left:
-                    self.theta += 3
-                    self.speed = 3000
+            if self.correct_walking_right:
+                self.theta -= 3
+                self.speed = 3000
+                self.correct_walking_right = False
+            elif self.correct_walking_left:
+                self.theta += 3
+                self.speed = 3000
+                self.correct_walking_left = False
 
     #計算xy中心位置
     def calculate_center_xy(self):    
@@ -266,7 +269,8 @@ class Marathon:
             self.x_division_y = (center_x1 - center_x2) / (center_y1 - center_y2)      #已改
             send.drawImageFunction(5, 1, xmin, xmax, ymin, ymax, 0, 0, 0)
             send.drawImageFunction(2, 0, center_x1, center_x2, center_y1, center_y2, 0, 0, 0)
-            rospy.loginfo(f"x%y = {self.x_division_y}")   #!!!!!print記得改掉 #已改
+            rospy.logwarn(f"x = {(center_x1 + center_x2)/2}")
+            rospy.logwarn(f"x%y = {self.x_division_y}")   #!!!!!print記得改掉 #已改
         else :
             self.x_division_y = 0
         #機器人大偏離或是已經要進入第二階段(線在視窗下方):
@@ -278,9 +282,9 @@ class Marathon:
             else:
                 self.line_bottom_flag = True
         else:
-            if(center_x1 + center_x2) / 2 > 200:
+            if(-0.4 < self.x_division_y < 0.4 and ((center_x1 + center_x2) / 2 > 180)):
                 self.correct_walking_right = True
-            elif (center_x1 + center_x2) / 2 < 120:
+            elif (-0.4 < self.x_division_y < 0.4 and((center_x1 + center_x2) / 2 < 140)):
                 self.correct_walking_left = True
 
     #開啟第二段
