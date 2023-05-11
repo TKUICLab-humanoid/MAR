@@ -9,6 +9,7 @@ import time
 import math
 
 ORIGIN_THETA = 0
+ORIGIN_SPEED = 3000
 send = Sendmessage()
 
 class Coordinate:
@@ -50,35 +51,35 @@ class Mar:
         if middle_point.y > 180:
             if self.seek_line.lower_center.x > 220:
                 self.theta = -5 + ORIGIN_THETA
-                self.speed_x = 3000
+                self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x < 80:
                 self.theta = 5 + ORIGIN_THETA
-                self.speed_x = 3000
+                self.speed_x = ORIGIN_SPEED
             else:
                 self.line_status = 'arrow'#進入第二階段的指標，線在機器人螢幕的正下方
                 rospy.loginfo(f'line in image = {self.line_status}')
         else:           
             if abs(slope) >= 15:
                 self.theta = ORIGIN_THETA
-                self.speed_x = 3500
+                self.speed_x = ORIGIN_SPEED + 500
             elif 7 <= abs(slope) < 15:
                 self.theta = 0
-                self.speed_x = 3400
+                self.speed_x = ORIGIN_SPEED + 400
             elif 4 <= abs(slope) < 7:
                 self.theta = 1 if slope > 0 else -1
-                self.speed_x = 3300
+                self.speed_x = ORIGIN_SPEED + 300
             elif 1.5 <= abs(slope) < 4:
                 self.theta = 2 if slope > 0 else -2
-                self.speed_x = 3200
+                self.speed_x = ORIGIN_SPEED + 200
             else:
                 self.theta = 4 if slope > 0 else -4
-                self.speed_x = 3100
+                self.speed_x = ORIGIN_SPEED + 100
             if self.seek_line.lower_center.x < 140 and abs(slope) > 2:
                 self.theta = 5 + ORIGIN_THETA
-                self.speed_x = 3000
+                self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x > 180 and abs(slope) > 2:
                 self.theta = -5 + ORIGIN_THETA
-                self.speed_x = 3000
+                self.speed_x = ORIGIN_SPEED
             self.line_status = 'online'
         rospy.logdebug(f'speed = {self.speed_x}')
         rospy.logdebug(f'theta = {self.theta}')
@@ -94,7 +95,7 @@ class Mar:
         elif abs(slope) < 7:
             self.theta = 3 if slope > 0 else -4
             self.speed_x = -500
-            self.speed_y = 500 if slope > 0 else 800
+            self.speed_y = -500 if slope > 0 else -800
         if self.arrow_cnt_times >= 5:
             self.yaw_temp = send.imu_value_Yaw
             self.arrow_cnt_times = 0
