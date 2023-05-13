@@ -167,6 +167,7 @@ class Mar:
                 arrow = self.arrow_yolo()
                 if arrow and self.line_status == 'arrow':
                     self.status = 'First_arrow'
+                    rospy.logwarn(f'status = {self.status}')
                 send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
             elif self.status == 'First_arrow':
                 self.seek_line.update()
@@ -195,9 +196,21 @@ class Seek_line:
         self.lower_center = Coordinate(0, 0)
 
     def update(self):
+        filter_img_size = []
+        img_size = np.array(send.color_mask_subject_size)
+        img_xmin = np.array(send.color_mask_subject_XMin)
+        img_xmax = np.array(send.color_mask_subject_XMax)
+        img_ymin = np.array(send.color_mask_subject_YMin)
+        img_ymax = np.array(send.color_mask_subject_YMax)
+        filter_img_size = img_size > 450
+        img_xmin_new = img_xmin[filter_img_size].min()
+        img_xmax_new = img_xmax[filter_img_size].max()
+        img_ymin_new = img_ymin[filter_img_size].min()
+        img_ymax_new = img_ymax[filter_img_size].max()
         #影像輸出為一維陣列，8bits
         img_data = np.frombuffer(send.Label_Model, dtype = np.uint8)
         img_data = img_data.reshape(240, 320)
+        img_data = img_data[img_xmin_new : img_xmax_new, img_ymin_new : img_ymax_new]
         y_coord, x_coord = np.where(img_data != 0)
         if len(x_coord) == 0:
             self.upper_center.x, self.upper_center.y = 0, 0
@@ -206,12 +219,12 @@ class Seek_line:
         middle_y = (np.max(y_coord) + np.min(y_coord)) / 2
         upper_filter = y_coord <= middle_y
         upper_x, upper_y = x_coord[upper_filter], y_coord[upper_filter]
-        self.upper_center.x = np.mean(upper_x)
-        self.upper_center.y = np.mean(upper_y)
+        self.upper_center.x = np.mean(upper_x) + img_xmin_new
+        self.upper_center.y = np.mean(upper_y) + img_ymin_new
         lower_filter = y_coord > middle_y
         lower_x, lower_y = x_coord[lower_filter], y_coord[lower_filter]
-        self.lower_center.x = np.mean(lower_x)
-        self.lower_center.y = np.mean(lower_y)
+        self.lower_center.x = np.mean(lower_x) + img_xmin_new
+        self.lower_center.y = np.mean(lower_y) + img_ymin_new
         send.drawImageFunction(2, 0, int(self.lower_center.x), int(self.upper_center.x), int(self.lower_center.y), int(self.upper_center.y), 0, 0, 0)
 
     def calculate_slope(self):
