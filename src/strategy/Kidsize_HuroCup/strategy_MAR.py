@@ -41,9 +41,9 @@ class Mar:
         self.arrow_cnt_times = 0
         self.yaw_temp = 0                                  
         self.line_status = 'online'
-        send.sendHeadMotor(2, 1500, 50)
+        send.sendHeadMotor(2, 1550, 50)
         send.sendHeadMotor(1, 2048, 50)
-        send.sendSensorReset()
+        send.sendSensorReset(1, 1, 1)
 
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
@@ -95,18 +95,21 @@ class Mar:
         elif abs(slope) < 7:
             self.theta = 3 if slope > 0 else -4
             self.speed_x = -500
-            self.speed_y = -500 if slope > 0 else -800
+            self.speed_y = 500 if slope > 0 else 800
         if self.arrow_cnt_times >= 5:
             self.yaw_temp = send.imu_value_Yaw
             self.arrow_cnt_times = 0
+            send.sendHeadMotor(2, 1500, 50)
             self.status = 'Arrow_Part'
 
     def arrow_yolo(self):
         self.arrow_center.x, self.arrow_center.y = 0, 0
         self.arrow_temp.append(send.yolo_Label)
+        rospy.loginfo(f" arrow list: {self.arrow_temp}")
         arrow_cnt_temp = len(set(self.arrow_temp))
         if arrow_cnt_temp == 1 and self.arrow_temp[0] != 'None':
             if self.arrow_temp[0] == 'left' or self.arrow_temp[0] == 'right':
+                rospy.logwarn("!!!!!!! set can_tuen_flag")
                 self.can_turn_flag = True
             self.arrow_center.y = send.yolo_Y
             self.arrow_center.x = send.yolo_X
@@ -124,7 +127,7 @@ class Mar:
         self.yaw_calculate()
         if self.arrow_temp[0] == 'right':
             rospy.logdebug(f'箭頭：右轉')
-            send.sendContinuousValue(2500, 0, 0, -4 + ORIGIN_THETA, 0)
+            send.sendContinuousValue(2500, 0, 0, -6 + ORIGIN_THETA, 0)
         elif self.arrow_temp[0] == 'left':
             rospy.logdebug(f'箭頭：左轉')
             send.sendContinuousValue(2300, 0, 0, 5 + ORIGIN_THETA, 0)
@@ -132,6 +135,7 @@ class Mar:
             rospy.logdebug(f'箭頭轉彎結束')
             self.yaw_temp = self.yaw
             self.turn_now_flag = False
+            self.can_turn_flag = False
 
     def imu_go(self):#直走
         self.theta = 0 + ORIGIN_THETA
@@ -146,10 +150,10 @@ class Mar:
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
             self.yaw_calculate()
-            if  self.yaw - self.yaw_temp > 6:
+            if  self.yaw - self.yaw_temp > 3:
                 self.theta = -3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw - self.yaw_temp < 0:
+            elif self.yaw - self.yaw_temp < -3:
                 self.theta = 3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
@@ -179,7 +183,8 @@ class Mar:
                 else:
                     self.arrow_yolo()
                     if self.can_turn_flag:
-                        if self.arrow_center.y >= 170:
+                        rospy.loginfo('can turn !!!')
+                        if self.arrow_center.y >= 165:
                             self.arrow_cnt_times += 1
                         if self.arrow_cnt_times >= 4:
                             self.turn_now_flag = True
@@ -196,36 +201,56 @@ class Seek_line:
         self.lower_center = Coordinate(0, 0)
 
     def update(self):
-        filter_img_size = []
         img_size = np.array(send.color_mask_subject_size)
         img_xmin = np.array(send.color_mask_subject_XMin)
         img_xmax = np.array(send.color_mask_subject_XMax)
         img_ymin = np.array(send.color_mask_subject_YMin)
         img_ymax = np.array(send.color_mask_subject_YMax)
         filter_img_size = img_size > 450
+        has_object = filter_img_size.any()
+
+        if not has_object:
+            rospy.logdebug(f'no object')
+            self.upper_center.x, self.upper_center.y = 0, 0
+            self.lower_center.x, self.lower_center.y = 0, 0
+            return
         img_xmin_new = img_xmin[filter_img_size].min()
         img_xmax_new = img_xmax[filter_img_size].max()
         img_ymin_new = img_ymin[filter_img_size].min()
         img_ymax_new = img_ymax[filter_img_size].max()
+        send.drawImageFunction(7, 1, img_xmin_new, img_xmax_new, img_ymin_new, img_ymax_new, 255, 0, 255)
         #影像輸出為一維陣列，8bits
         img_data = np.frombuffer(send.Label_Model, dtype = np.uint8)
         img_data = img_data.reshape(240, 320)
-        img_data = img_data[img_xmin_new : img_xmax_new, img_ymin_new : img_ymax_new]
+        img_data = img_data[img_ymin_new : img_ymax_new, img_xmin_new : img_xmax_new]
+        
         y_coord, x_coord = np.where(img_data != 0)
+
         if len(x_coord) == 0:
             self.upper_center.x, self.upper_center.y = 0, 0
             self.lower_center.x, self.lower_center.y = 0, 0
             return
-        middle_y = (np.max(y_coord) + np.min(y_coord)) / 2
+        
+        middle_y = (np.max(y_coord) + np.min(y_coord)) // 2
         upper_filter = y_coord <= middle_y
         upper_x, upper_y = x_coord[upper_filter], y_coord[upper_filter]
         self.upper_center.x = np.mean(upper_x) + img_xmin_new
         self.upper_center.y = np.mean(upper_y) + img_ymin_new
+        # upper_xmin = upper_x.min() + img_xmin_new
+        # upper_xmax = upper_x.max() + img_xmin_new
+        # upper_ymin = upper_y.min() + img_ymin_new
+        # upper_ymax = upper_y.max() + img_ymin_new
+        # send.drawImageFunction(5, 1, upper_xmin, upper_xmax, upper_ymin, upper_ymax, 255, 0, 0)
         lower_filter = y_coord > middle_y
         lower_x, lower_y = x_coord[lower_filter], y_coord[lower_filter]
         self.lower_center.x = np.mean(lower_x) + img_xmin_new
         self.lower_center.y = np.mean(lower_y) + img_ymin_new
-        send.drawImageFunction(2, 0, int(self.lower_center.x), int(self.upper_center.x), int(self.lower_center.y), int(self.upper_center.y), 0, 0, 0)
+        # lower_xmin = lower_x.min() + img_xmin_new
+        # lower_xmax = lower_x.max() + img_xmin_new
+        # lower_ymin = lower_y.min() + img_ymin_new
+        # lower_ymax = lower_y.max() + img_ymin_new
+        # send.drawImageFunction(6, 1, lower_xmin, lower_xmax, lower_ymin, lower_ymax, 0, 255, 0)
+        send.drawImageFunction(2, 0, int(self.upper_center.x), int(self.lower_center.x), int(self.upper_center.y), int(self.lower_center.y), 0, 0, 0)
 
     def calculate_slope(self):
         delta = self.upper_center - self.lower_center
