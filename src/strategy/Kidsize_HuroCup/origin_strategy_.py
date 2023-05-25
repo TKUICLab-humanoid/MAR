@@ -13,7 +13,7 @@ ORIGIN_Y = 0
 #第一段的速度變化
 SPEED_CHANGE = [4000, 4000, 3800, 3800, 3700, 3700, 3600, 3600, 3600] 
 #第一段的角度變化
-THETA_CHANGE = [0, 1, 2, 2, 3, 3, 3, 4, 4]    
+THETA_CHANGE = [0, 1, 1, 2, 2, 3, 3, 3, 3]    
 send = Sendmessage()
 aaaa = rospy.init_node('talker', anonymous=True, log_level=rospy.INFO)
 
@@ -199,13 +199,13 @@ class Marathon:
             
             #直走
             if self.x_division_y >= 0.9:
-                self.theta = 5 + ORIGIN_THETA
+                self.theta = 4 + ORIGIN_THETA
                 self.speed = 3400
             elif self.x_division_y >= 0:
                 self.speed = int(SPEED_CHANGE[math.floor(self.x_division_y / 0.1)])
                 self.theta = int(THETA_CHANGE[math.floor(self.x_division_y / 0.1)]) + ORIGIN_THETA
             elif  self.x_division_y <= -0.9:
-                self.theta = -5 + ORIGIN_THETA
+                self.theta = -4 + ORIGIN_THETA
                 self.speed = 3400
             else:
                 self.speed = int(SPEED_CHANGE[math.floor(-self.x_division_y / 0.1)])
@@ -246,8 +246,8 @@ class Marathon:
                         ymin = send.color_mask_subject_YMin[i][j]
                     if ymax < send.color_mask_subject_YMax[i][j]:
                         ymax = send.color_mask_subject_YMax[i][j]
-                    if ymin < 50:
-                        ymin = 50
+                    if ymin < 75:
+                        ymin = 75
         if xmax != 0 :
             for high in range(ymin, ymax):
                 for wight in range(xmin, xmax):
