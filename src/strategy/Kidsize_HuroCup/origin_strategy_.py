@@ -13,19 +13,15 @@ ORIGIN_Y = 0
 #第一段的速度變化
 SPEED_CHANGE = [4000, 4000, 3800, 3800, 3700, 3700, 3600, 3600, 3600] 
 #第一段的角度變化
-THETA_CHANGE = [0, 1, 2, 2, 3, 3, 3, 4, 4]    
+THETA_CHANGE = [0, 1, 1, 2, 2, 3, 3, 3, 3]    
 send = Sendmessage()
+aaaa = rospy.init_node('talker', anonymous=True, log_level=rospy.INFO)
 
 class Marathon:
     def __init__(self):     
         #imu完成左轉、右轉-----------------------------------------------------
         self.finish_left_flag = False       
-        self.finish_right_flag = False      
-        #arrow_train/judge_the_arrow---------------------------------------------             
-        #成功判斷箭頭計數暫存
-        self.straight_number = 0              
-        self.right_number = 0 
-        self.left_number = 0          
+        self.finish_right_flag = False               
         #face_the_arrow---------------------------------------------------
         self.positive_arrow_times = 0       #重複判斷對正箭頭
         #main------------------------------------------------------------------ 
@@ -40,8 +36,8 @@ class Marathon:
         self.is_left_flag = False 
         #步態初始化
         self.start = True
-        self.yaw_offset = 0
-        self.yaw = 0
+        # send.imu_value_Yaw_offset = 0
+        send.imu_value_Yaw = 0
         self.speed = 0                      #初始速度
         self.theta = 0
         self.x_division_y = 0
@@ -58,16 +54,21 @@ class Marathon:
         self.see_arrow_flag = False         #成功判斷銀幕內有箭頭 #已改
         self.line_bottom_flag = False       #線段只有在銀幕下方
         self.enter_arrow_flag = False        #進入第二段 #已改
+        #arrow_train/judge_the_arrow---------------------------------------------             
+        #成功判斷箭頭計數暫存
+        self.straight_number = 0              
+        self.right_number = 0 
+        self.left_number = 0 
         #----------------------------------------------------------------------
 
     #修正yaw值(不超過180度)
-    def get_yaw(self):  
-        if (self.yaw - self.yaw_offset) <= -200:
-            self.yaw_offset -= 360
-        elif (self.yaw - self.yaw_offset) >= 200:
-            self.yaw_offset += 360
-        self.yaw = send.imu_value_Yaw - self.yaw_offset
-        rospy.logwarn(f"Yaw = {self.yaw}")
+    # def get_yaw(self):  
+    #     if (send.imu_value_Yaw - send.imu_value_Yaw_offset) <= -200:
+    #         send.imu_value_Yaw_offset -= 360
+    #     elif (send.imu_value_Yaw - send.imu_value_Yaw_offset) >= 200:
+    #         send.imu_value_Yaw_offset += 360
+    #     send.imu_value_Yaw = send.imu_value_Yaw - send.imu_value_Yaw_offset
+    #     rospy.logwarn(f"Yaw = {send.imu_value_Yaw}")
 
     #90度右轉
     def turn_right_ninety(self):    #已改
@@ -75,33 +76,33 @@ class Marathon:
         send.sendContinuousValue(2100, ORIGIN_Y, 0, -5 + ORIGIN_THETA, 0)
         send.sendHeadMotor(2, 2600, 50)
         time.sleep(0.01)
-        self.get_yaw()
-        if  self.yaw < -90:         #成功右轉90度後停止
+        # self.get_yaw()
+        if  send.imu_value_Yaw < -85:         #成功右轉90度後停止
             rospy.loginfo(f"右轉結束")
             rospy.loginfo(f"====================")
-            self.yaw_offset = send.imu_value_Yaw 
-            # send.sendSensorReset()
+            # send.imu_value_Yaw_offset = send.imu_value_Yaw 
+            send.sendSensorReset(0, 0, 1)
             self.finish_right_flag = True
 
     #90度左轉
     def turn_left_ninety(self):     #已改
-        self.get_yaw()
+        # self.get_yaw()
         rospy.loginfo(f'箭頭左轉')
         send.sendContinuousValue(2100, ORIGIN_Y, 0, 5 + ORIGIN_THETA ,0)
         send.sendHeadMotor(2, 2600, 50)
         time.sleep(0.01)
-        if  self.yaw > 80:          #成功左轉90度
+        if  send.imu_value_Yaw > 80:          #成功左轉90度
             rospy.loginfo(f"左轉結束")
             rospy.loginfo(f"====================")
-            self.yaw_offset = send.imu_value_Yaw
-            # send.sendSensorReset()
+             #send.imu_value_Yaw_offset = send.imu_value_Yaw
+            send.sendSensorReset(0, 0, 1)
             self.finish_left_flag = True
 
     #直走
     def go_straight(self):          #已改
         self.theta = ORIGIN_THETA
         rospy.loginfo(f"箭頭直走!")
-        self.get_yaw()
+        # self.get_yaw()
         self.speed = 3600
         if 0 < send.yolo_X <= 140: #大偏離箭頭修正
             self.theta = 4
@@ -114,11 +115,11 @@ class Marathon:
             rospy.loginfo(f"====================")
             send.sendContinuousValue(self.speed, ORIGIN_Y, 0, self.theta + ORIGIN_THETA, 0)   #副涵式結束後也有一個sendContinuousValue,是不是留一個就好？
         else:
-            if  self.yaw > 8:       #第一段直線的偏離修正
+            if  send.imu_value_Yaw > 8:       #第一段直線的偏離修正
                 self.theta = -2 + ORIGIN_THETA
                 rospy.loginfo(f"直線向右修正")
                 rospy.loginfo(f"====================")
-            elif self.yaw < -8:
+            elif send.imu_value_Yaw < -8:
                 self.theta = 2 + ORIGIN_THETA
                 rospy.loginfo(f"直線向左修正")
                 rospy.loginfo(f"====================")
@@ -126,8 +127,8 @@ class Marathon:
     #箭頭訓練
     def arrow_train(self):       
         send.drawImageFunction(1, 1, send.yolo_XMin, send.yolo_XMax, send.yolo_YMin, send.yolo_YMax, 255, 0, 0)
-        rospy.loginfo(f"X = {send.yolo_X}")
-        rospy.loginfo(f"Y = {send.yolo_Y}")
+        rospy.loginfo(f"arrow_X = {send.yolo_X}")
+        rospy.loginfo(f"arrow_Y = {send.yolo_Y}")
         rospy.loginfo(f"labei = {send.yolo_Label}")     #不知道?是判斷到的箭頭名稱咪?????QAQ
         if send.yolo_Label != "none":
             if send.yolo_Label == "straight":
@@ -153,13 +154,13 @@ class Marathon:
             self.theta = 0 + ORIGIN_THETA
             self.positive_arrow_times += 1     #重複確認對正箭頭   #!!!!!flag 只會有true和false #已改
         #往右
-        elif -0.4 < self.x_division_y < -0.05:
+        elif -0.4 <= self.x_division_y < -0.05:
             self.theta = -3 + ORIGIN_THETA
         elif self.x_division_y < -0.4:
             self.theta = -4 + ORIGIN_THETA
             self.speed = 0
         #往左
-        elif 0.4 > self.x_division_y > 0.05:
+        elif 0.4 >= self.x_division_y > 0.05:
             self.theta = 3 + ORIGIN_THETA
         elif self.x_division_y > 0.4:
             self.theta = 4 + ORIGIN_THETA
@@ -167,12 +168,12 @@ class Marathon:
 
     #判斷出箭頭(一定會判斷出某個箭頭)
     def judge_the_arrow(self):   
-            if self.straight_number >= 5:       #成功連續判斷5次
+            if self.straight_number >= 7:       #成功連續判斷5次
                 self.straight_number = 0
                 rospy.loginfo(f"直走箭頭判斷成功")
                 self.see_arrow_flag = True
                 #self.is_left_flag = False (我覺得不用?)
-            elif self.right_number >= 3:
+            elif self.right_number >= 7:
                 self.right_number = 0
                 rospy.loginfo(f"右轉箭頭判斷成功")
                 self.see_arrow_flag = True
@@ -198,23 +199,25 @@ class Marathon:
             
             #直走
             if self.x_division_y >= 0.9:
-                self.theta = 5 + ORIGIN_THETA
+                self.theta = 4 + ORIGIN_THETA
                 self.speed = 3400
             elif self.x_division_y >= 0:
                 self.speed = int(SPEED_CHANGE[math.floor(self.x_division_y / 0.1)])
                 self.theta = int(THETA_CHANGE[math.floor(self.x_division_y / 0.1)]) + ORIGIN_THETA
             elif  self.x_division_y <= -0.9:
-                self.theta = -5 + ORIGIN_THETA
+                self.theta = -4 + ORIGIN_THETA
                 self.speed = 3400
             else:
                 self.speed = int(SPEED_CHANGE[math.floor(-self.x_division_y / 0.1)])
                 self.theta = -int(THETA_CHANGE[math.floor(-self.x_division_y / 0.1)]) + ORIGIN_THETA
-                if self.correct_walking_right:
-                    self.theta -= 3
-                    self.speed = 3000
-                elif self.correct_walking_left:
-                    self.theta += 3
-                    self.speed = 3000
+            if self.correct_walking_right:
+                self.theta -= 3
+                self.speed = 3000
+                self.correct_walking_right = False
+            elif self.correct_walking_left:
+                self.theta += 3
+                self.speed = 3000
+                self.correct_walking_left = False
 
     #計算xy中心位置
     def calculate_center_xy(self):    
@@ -243,8 +246,8 @@ class Marathon:
                         ymin = send.color_mask_subject_YMin[i][j]
                     if ymax < send.color_mask_subject_YMax[i][j]:
                         ymax = send.color_mask_subject_YMax[i][j]
-                    if ymin < 50:
-                        ymin = 50
+                    if ymin < 75:
+                        ymin = 75
         if xmax != 0 :
             for high in range(ymin, ymax):
                 for wight in range(xmin, xmax):
@@ -266,7 +269,8 @@ class Marathon:
             self.x_division_y = (center_x1 - center_x2) / (center_y1 - center_y2)      #已改
             send.drawImageFunction(5, 1, xmin, xmax, ymin, ymax, 0, 0, 0)
             send.drawImageFunction(2, 0, center_x1, center_x2, center_y1, center_y2, 0, 0, 0)
-            rospy.loginfo(f"x%y = {self.x_division_y}")   #!!!!!print記得改掉 #已改
+            rospy.logwarn(f"x = {(center_x1 + center_x2)/2}")
+            rospy.logwarn(f"x%y = {self.x_division_y}")   #!!!!!print記得改掉 #已改
         else :
             self.x_division_y = 0
         #機器人大偏離或是已經要進入第二階段(線在視窗下方):
@@ -278,9 +282,9 @@ class Marathon:
             else:
                 self.line_bottom_flag = True
         else:
-            if(center_x1 + center_x2) / 2 > 200:
+            if(-0.4 < self.x_division_y < 0.4 and ((center_x1 + center_x2) / 2 > 180)):
                 self.correct_walking_right = True
-            elif (center_x1 + center_x2) / 2 < 120:
+            elif (-0.4 < self.x_division_y < 0.4 and((center_x1 + center_x2) / 2 < 140)):
                 self.correct_walking_left = True
 
     #開啟第二段
@@ -301,7 +305,7 @@ class Marathon:
                 send.sendHeadMotor(2, 2600, 50)
                 send.sendHeadMotor(1, 2048, 50)
                 time.sleep(0.01)
-                send.sendSensorReset()
+                send.sendSensorReset(1, 1, 1)
                 send.sendBodyAuto(0, 0, 0, 0, 1, 0)
                 self.start = False  
             else:
@@ -317,8 +321,8 @@ class Marathon:
                         if self.positive_arrow_times >= 5:         #多次判斷有正對第一個箭頭
                             self.enter_arrow_flag = True
                             self.turn_now_flag = True
-                            # send.sendSensorReset()
-                            self.yaw_offset = send.imu_value_Yaw
+                            send.sendSensorReset(0, 0, 1)
+                            # send.imu_value_Yaw_offset = send.imu_value_Yaw
                             self.positive_arrow_times = 0
                             send.sendHeadMotor(2, 2600, 50)
                             time.sleep(0.01)

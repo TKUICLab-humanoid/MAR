@@ -28,7 +28,7 @@ from utils import resize_and_pad, get_image_tensor, save_one_json, coco80_to_coc
 class aaImage:
     def __init__(self):
         self.bridge = CvBridge()
-        self.sub = rospy.Subscriber("orign_image",Image, self.OriginImage)
+        self.sub = rospy.Subscriber("/usb_cam/image_raw",Image, self.OriginImage)
     def OriginImage(self,msg):
         self.originimg = self.bridge.imgmsg_to_cv2(msg,"bgr8")
 

@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 from rospy import Publisher
 from tku_msgs.msg import Interface,HeadPackage,SandHandSpeed,DrawImage,SingleMotorData,\
-SensorSet,ObjectList,LabelModelObjectList,RobotPos,SetGoalPoint,SoccerDataList,SensorPackage,YoloData
+SensorSet,ObjectList,LabelModelObjectList,RobotPos,SetGoalPoint,SoccerDataList,SensorPackage,YoloData,parameter
 from std_msgs.msg import Int16,Bool
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -21,6 +21,8 @@ class Sendmessage:
         self.continuous_value_pub = rospy.Publisher("/ChangeContinuousValue_Topic",Interface, queue_size=100)
         self.single_motor_data_pub = rospy.Publisher("/package/SingleMotorData",SingleMotorData, queue_size=100)
         self.sensor_pub = rospy.Publisher("sensorset",SensorSet, queue_size=100)
+        self.parameter_pub = rospy.Publisher("/web/parameter_Topic",parameter, queue_size=100)
+        self.continuous_back = rospy.Publisher("/walkinggait/Continuousback",Bool, queue_size=100)
         
         self.Web = False
         self.Label_Model = [0 for i in range(320*240)]
@@ -48,7 +50,7 @@ class Sendmessage:
         self.yolo_YMin = 0
         self.yolo_XMax = 0
         self.yolo_YMax = 0
-        aaaa = rospy.init_node('talker', anonymous=True)
+        #aaaa = rospy.init_node('talker', anonymous=True)
         object_list_sub = rospy.Subscriber("/Object/List",ObjectList, self.getObject)
         label_model_sub = rospy.Subscriber("/LabelModel/List",LabelModelObjectList, self.getLabelModel)
         #compress_image_sub = rospy.Subscriber("compress_image",Image, self.catchImage)
@@ -111,6 +113,23 @@ class Sendmessage:
         walkdata.sensor_mode = sensor
         self.continuous_value_pub.publish(walkdata)
 
+    def saveWalkParameter(self, mode, com_y_shift, y_swing, period_t, t_dsp, base_default_z, right_z_shift, base_lift_z, back_flag):
+        walkparameter = parameter()
+        walkparameter.mode = mode
+        walkparameter.X_Swing_Range = com_y_shift
+        walkparameter.Y_Swing_Range = y_swing if y_swing > 6 else 6
+        walkparameter.Z_Swing_Range = 0
+        walkparameter.Period_T = period_t if period_t % 30 == 0 else 420
+        walkparameter.Period_T2 = 720
+        walkparameter.Sample_Time = 20
+        walkparameter.OSC_LockRange = t_dsp if 0 <= t_dsp <= 1 else 0
+        walkparameter.BASE_Default_Z = base_default_z if base_default_z > 1 else 1
+        walkparameter.Y_Swing_Shift = right_z_shift
+        walkparameter.BASE_LIFT_Z = base_lift_z
+        walkparameter.Stand_Balance = False
+        self.continuous_back.publish(back_flag)
+        self.parameter_pub.publish(walkparameter)
+
     def sendSingleMotor(self,ID,Position,Speed):
         MotorData = SingleMotorData()
         MotorData.ID = ID
@@ -126,8 +145,11 @@ class Sendmessage:
         msg.sensor_modeset = modeset
         self.sensor_pub.publish(msg)
 
-    def sendSensorReset(self):
+    def sendSensorReset(self, reset_roll, reset_pitch, reset_yaw):
         msg = SensorSet()
+        msg.sensor_P = reset_roll
+        msg.sensor_I = reset_pitch
+        msg.sensor_D = reset_yaw
         msg.sensor_modeset = 0x02
         self.sensor_pub.publish(msg)
 
