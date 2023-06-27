@@ -47,7 +47,9 @@ class Mar:
 
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
+        print(slope)
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
+        print(self.seek_line.lower_center.x)
         if middle_point.y > 180:
             if self.seek_line.lower_center.x > 220:
                 self.theta = -5 + ORIGIN_THETA
@@ -74,7 +76,10 @@ class Mar:
             else:
                 self.theta = 4 if slope > 0 else -4
                 self.speed_x = ORIGIN_SPEED + 100
-            if self.seek_line.lower_center.x < 140 and abs(slope) > 2:
+            if middle_point.x == 0 and middle_point.y == 0:
+                self.theta = ORIGIN_THETA
+                self.speed_x = ORIGIN_SPEED
+            elif self.seek_line.lower_center.x < 140 and abs(slope) > 2:
                 self.theta = 5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x > 180 and abs(slope) > 2:
@@ -166,16 +171,18 @@ class Mar:
                 send.sendBodyAuto(0, 0, 0, 0, 1, 0)
                 self.status = 'line'  if send.DIOValue == 24 else 'Arrow_Part'
             elif self.status == 'line' and send.DIOValue == 24:
-                self.seek_line.update()
-                self.theta_value()
+                if send.data_check == True:
+                    self.seek_line.update()
+                    self.theta_value()
                 arrow = self.arrow_yolo()
                 if arrow and self.line_status == 'arrow':
                     self.status = 'First_arrow'
                     rospy.logwarn(f'status = {self.status}')
                 send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
             elif self.status == 'First_arrow':
-                self.seek_line.update()
-                self.line_to_arrow()
+                if send.data_check == True:
+                    self.seek_line.update()
+                    self.line_to_arrow()
                 send.sendContinuousValue(self.speed_x, self.speed_y, 0, self.theta, 0)
             elif self.status == 'Arrow_Part':
                 if self.turn_now_flag:
@@ -200,24 +207,36 @@ class Seek_line:
         self.upper_center = Coordinate(0, 0)
         self.lower_center = Coordinate(0, 0)
 
-    def update(self):
-        img_size = np.array(send.color_mask_subject_size)
-        img_xmin = np.array(send.color_mask_subject_XMin)
-        img_xmax = np.array(send.color_mask_subject_XMax)
-        img_ymin = np.array(send.color_mask_subject_YMin)
-        img_ymax = np.array(send.color_mask_subject_YMax)
-        filter_img_size = img_size > 450
-        has_object = filter_img_size.any()
+    def cvt_list2d2numpy(self, list2d):
+        max_len = max([len(sub_lst) for sub_lst in list2d])
+        np_array = np.vstack([np.pad(np.array(lst), (0, (max_len - len(lst)))) for lst in list2d])
+        return np_array
 
+    def update(self):
+        img_size = self.cvt_list2d2numpy(send.color_mask_subject_size)
+        img_xmin = self.cvt_list2d2numpy(send.color_mask_subject_XMin)
+        img_xmax = self.cvt_list2d2numpy(send.color_mask_subject_XMax)
+        img_ymin = self.cvt_list2d2numpy(send.color_mask_subject_YMin)
+        img_ymax = self.cvt_list2d2numpy(send.color_mask_subject_YMax)
+        # img_size = np.array(send.color_mask_subject_size)
+        # img_xmin = np.array(send.color_mask_subject_XMin)
+        # img_xmax = np.array(send.color_mask_subject_XMax)
+        # img_ymin = np.array(send.color_mask_subject_YMin)
+        # img_ymax = np.array(send.color_mask_subject_YMax)
+        filter_img_size = img_size > 380
+        has_object = filter_img_size.any()
+        send.data_check = False
         if not has_object:
             rospy.logdebug(f'no object')
             self.upper_center.x, self.upper_center.y = 0, 0
             self.lower_center.x, self.lower_center.y = 0, 0
             return
-        img_xmin_new = img_xmin[filter_img_size].min()
-        img_xmax_new = img_xmax[filter_img_size].max()
-        img_ymin_new = img_ymin[filter_img_size].min()
-        img_ymax_new = img_ymax[filter_img_size].max()
+        
+        # print(img_ymin[filter_img_size])
+        img_xmin_new = int(img_xmin[filter_img_size].min())
+        img_xmax_new = int(img_xmax[filter_img_size].max())
+        img_ymin_new = int(img_ymin[filter_img_size].min())
+        img_ymax_new = int(img_ymax[filter_img_size].max())
         send.drawImageFunction(7, 1, img_xmin_new, img_xmax_new, img_ymin_new, img_ymax_new, 255, 0, 255)
         #影像輸出為一維陣列，8bits
         img_data = np.frombuffer(send.Label_Model, dtype = np.uint8)
