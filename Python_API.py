@@ -27,20 +27,21 @@ class Sendmessage:
         # self.Label_Model = np.zeros([320*240])
         self.bridge = CvBridge()
         self.color_mask_subject_cnts = [0 for i in range(8)]
-        self.color_mask_subject_X = [[0]*320 for i in range(8)]
-        self.color_mask_subject_Y = [[0]*320 for i in range(8)]
-        self.color_mask_subject_XMin = [[0]*320 for i in range(8)]
-        self.color_mask_subject_XMax = [[0]*320 for i in range(8)]
-        self.color_mask_subject_YMax = [[0]*320 for i in range(8)]
-        self.color_mask_subject_YMin = [[0]*320 for i in range(8)]
-        self.color_mask_subject_Width = [[0]*320 for i in range(8)]
-        self.color_mask_subject_Height = [[0]*320 for i in range(8)]
-        self.color_mask_subject_size = [[0]*320 for i in range(8)]
+        self.color_mask_subject_X = [0 for i in range(8)]
+        self.color_mask_subject_Y = [0 for i in range(8)]
+        self.color_mask_subject_XMin = [0 for i in range(8)]
+        self.color_mask_subject_XMax = [0 for i in range(8)]
+        self.color_mask_subject_YMax = [0 for i in range(8)]
+        self.color_mask_subject_YMin = [0 for i in range(8)]
+        self.color_mask_subject_Width = [0 for i in range(8)]
+        self.color_mask_subject_Height = [0 for i in range(8)]
+        self.color_mask_subject_size = [0 for i in range(8)]
         self.imu_value_Roll = 0
         self.imu_value_Yaw = 0
         self.imu_value_Pitch = 0
         self.DIOValue = 0x00
         self.is_start = False
+        self.data_check = False
         self.time = 0
         self.yolo_IoU = 0
         self.yolo_Label = ''
@@ -155,33 +156,45 @@ class Sendmessage:
     def startFunction(self,msg):
         self.Web = msg.data
     def getLabelModel(self,msg):
-        self.Label_Model = msg.LabelModel    
+        self.Label_Model = msg.LabelModel
     def getObject(self,msg):
-        time_start = time.time()
-        self.color_mask_subject_X = [[0]*320 for i in range(8)]
-        self.color_mask_subject_Y = [[0]*320 for i in range(8)]
-        self.color_mask_subject_XMin = [[0]*320 for i in range(8)]
-        self.color_mask_subject_XMax = [[0]*320 for i in range(8)]
-        self.color_mask_subject_YMax = [[0]*320 for i in range(8)]
-        self.color_mask_subject_YMin = [[0]*320 for i in range(8)]
-        self.color_mask_subject_Width = [[0]*320 for i in range(8)]
-        self.color_mask_subject_Height = [[0]*320 for i in range(8)]
-        self.color_mask_subject_size = [[0]*320 for i in range(8)]
-        for i in range (8):
-            self.color_mask_subject_cnts[i] = msg.Objectlist[i].cnt
-            for j in range (self.color_mask_subject_cnts[i]):
+        if self.data_check == False:
+            # for i in range (8):
+            #     self.color_mask_subject_cnts[i] = msg.Objectlist[i].cnt
+            #     self.color_mask_subject_X[i] = [msg.Objectlist[i].Colorarray[j].X for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_Y[i] = [msg.Objectlist[i].Colorarray[j].Y for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_XMin[i] = [msg.Objectlist[i].Colorarray[j].XMin for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_YMin[i] = [msg.Objectlist[i].Colorarray[j].YMin for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_XMax[i] = [msg.Objectlist[i].Colorarray[j].XMax for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_YMax[i] = [msg.Objectlist[i].Colorarray[j].YMax for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_Width[i] = [msg.Objectlist[i].Colorarray[j].Width for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_Height[i] = [msg.Objectlist[i].Colorarray[j].Height for j in range(msg.Objectlist[i].cnt)]
+            #     self.color_mask_subject_size[i] = [msg.Objectlist[i].Colorarray[j].size for j in range(msg.Objectlist[i].cnt)]
+            self.color_mask_subject_cnts = [0 for i in range(8)]
+            self.color_mask_subject_X = [[0]*320 for i in range(8)]
+            self.color_mask_subject_Y = [[0]*320 for i in range(8)]
+            self.color_mask_subject_XMin = [[0]*320 for i in range(8)]
+            self.color_mask_subject_XMax = [[0]*320 for i in range(8)]
+            self.color_mask_subject_YMax = [[0]*320 for i in range(8)]
+            self.color_mask_subject_YMin = [[0]*320 for i in range(8)]
+            self.color_mask_subject_Width = [[0]*320 for i in range(8)]
+            self.color_mask_subject_Height = [[0]*320 for i in range(8)]
+            self.color_mask_subject_size = [[0]*320 for i in range(8)]
+            for i in range (8):
+                self.color_mask_subject_cnts[i] = msg.Objectlist[i].cnt
+                for j in range (self.color_mask_subject_cnts[i]):
 
-                self.color_mask_subject_X[i][j] = msg.Objectlist[i].Colorarray[j].X
-                self.color_mask_subject_Y[i][j] = msg.Objectlist[i].Colorarray[j].Y
-                self.color_mask_subject_XMin[i][j] = msg.Objectlist[i].Colorarray[j].XMin
-                self.color_mask_subject_YMin[i][j] = msg.Objectlist[i].Colorarray[j].YMin
-                self.color_mask_subject_XMax[i][j] = msg.Objectlist[i].Colorarray[j].XMax
-                self.color_mask_subject_YMax[i][j] = msg.Objectlist[i].Colorarray[j].YMax
-                self.color_mask_subject_Width[i][j] = msg.Objectlist[i].Colorarray[j].Width
-                self.color_mask_subject_Height[i][j] = msg.Objectlist[i].Colorarray[j].Height
-                self.color_mask_subject_size[i][j] = msg.Objectlist[i].Colorarray[j].size
-        time_end = time.time()
-        # self.time = time_end - time_start
+                    self.color_mask_subject_X[i][j] = msg.Objectlist[i].Colorarray[j].X
+                    self.color_mask_subject_Y[i][j] = msg.Objectlist[i].Colorarray[j].Y
+                    self.color_mask_subject_XMin[i][j] = msg.Objectlist[i].Colorarray[j].XMin
+                    self.color_mask_subject_YMin[i][j] = msg.Objectlist[i].Colorarray[j].YMin
+                    self.color_mask_subject_XMax[i][j] = msg.Objectlist[i].Colorarray[j].XMax
+                    self.color_mask_subject_YMax[i][j] = msg.Objectlist[i].Colorarray[j].YMax
+                    self.color_mask_subject_Width[i][j] = msg.Objectlist[i].Colorarray[j].Width
+                    self.color_mask_subject_Height[i][j] = msg.Objectlist[i].Colorarray[j].Height
+                    self.color_mask_subject_size[i][j] = msg.Objectlist[i].Colorarray[j].size
+            self.data_check = True
+    
     def sensorPackageFunction(self,msg):        
         self.imu_value_Roll  = msg.IMUData[0]
         self.imu_value_Pitch = msg.IMUData[1]

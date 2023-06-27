@@ -5,6 +5,7 @@ import rospy
 import numpy as np
 from Python_API import Sendmessage
 import time
+# import cv2
 import math
 
 ORIGIN_THETA = 0
@@ -37,15 +38,17 @@ class Mar:
         self.can_turn_flag = False                                         
         self.arrow_flag = False
         self.turn_now_flag = False
-        self.arrow_cnt_times = 0                           
+        self.arrow_cnt_times = 0
+        self.yaw_temp = 0                                  
         self.line_status = 'online'
-        send.sendHeadMotor(2, 1450, 50)
+        send.sendHeadMotor(2, 1400, 50)
         send.sendHeadMotor(1, 2048, 50)
         send.sendSensorReset(1, 1, 1)
 
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
+        
         if middle_point.y > 180:
             if self.seek_line.lower_center.x > 220:
                 self.theta = -5 + ORIGIN_THETA
@@ -55,9 +58,8 @@ class Mar:
                 self.speed_x = ORIGIN_SPEED
             else:
                 self.line_status = 'arrow'#進入第二階段的指標，線在機器人螢幕的正下方
-                rospy.loginfo(f'line in image {self.line_status}')
+                rospy.loginfo(f'line in image = {self.line_status}')
         else:           
-            # print((self.seek_line.upper_center.x + self.seek_line.lower_center.x)//2)
             if abs(slope) >= 15:
                 self.theta = ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED + 500
@@ -71,15 +73,12 @@ class Mar:
                 self.theta = 2 if slope > 0 else -2
                 self.speed_x = ORIGIN_SPEED + 200
             else:
-                self.theta = 3 if slope > 0 else -3
+                self.theta = 4 if slope > 0 else -4
                 self.speed_x = ORIGIN_SPEED + 100
-            if ((self.seek_line.upper_center.x + self.seek_line.lower_center.x) // 2) > 285:
-                self.theta = -5 + ORIGIN_THETA
+            if middle_point.x == 0 and middle_point.y == 0:
+                self.theta = ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
-            elif ((self.seek_line.upper_center.x + self.seek_line.lower_center.x) // 2) < 35:
-                self.theta = 5 + ORIGIN_THETA
-                self.speed_x = ORIGIN_SPEED
-            if self.seek_line.lower_center.x < 140 and abs(slope) > 2:
+            elif self.seek_line.lower_center.x < 140 and abs(slope) > 2:
                 self.theta = 5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x > 180 and abs(slope) > 2:
@@ -95,16 +94,16 @@ class Mar:
             self.theta = 0 + ORIGIN_THETA
             self.speed_x = 0
             self.arrow_cnt_times += 1
-        elif 7 < abs(slope) < 15:
-            self.theta = 1 if slope > 0 else -2 
-        elif abs(slope) < 7:
-            self.theta = 3 if slope > 0 else -4
+        elif 7 < abs(slope) <= 15:
+            self.theta = 1 if slope > 0 else -1 
+        elif abs(slope) <= 7:
+            self.theta = 3 if slope > 0 else -3
             self.speed_x = -500
-            # self.speed_y = 500 if slope > 0 else 800
+            self.speed_y = 500 if slope > 0 else 800
         if self.arrow_cnt_times >= 5:
-            send.sendSensorReset(0, 0, 1)
+            self.yaw_temp = send.imu_value_Yaw
             self.arrow_cnt_times = 0
-            send.sendHeadMotor(2, 1500, 50)
+            send.sendHeadMotor(2, 1400, 50)
             self.status = 'Arrow_Part'
 
     def arrow_yolo(self):
@@ -116,24 +115,29 @@ class Mar:
             if self.arrow_temp[0] == 'left' or self.arrow_temp[0] == 'right':
                 rospy.logwarn("!!!!!!! set can_tuen_flag")
                 self.can_turn_flag = True
-            elif self.arrow_temp[0] == 'stright':
-                self.can_turn_flag = False
             self.arrow_center.y = send.yolo_Y
             self.arrow_center.x = send.yolo_X
             send.drawImageFunction(1, 1, send.yolo_XMin, send.yolo_XMax, send.yolo_YMin, send.yolo_YMax, 255, 0, 0)
             return True
 
+    def yaw_calculate(self):
+        if -240 > self.yaw - self.yaw_temp:
+                self.yaw = self.yaw + 360
+        elif self.yaw - self.yaw_temp > 240:
+                self.yaw = self.yaw - 360
+
     def arrow_turn(self):
         self.yaw = send.imu_value_Yaw
+        self.yaw_calculate()
         if self.arrow_temp[0] == 'right':
             rospy.logdebug(f'箭頭：右轉')
-            send.sendContinuousValue(2500, 0, 0, -6 + ORIGIN_THETA, 0)
+            send.sendContinuousValue(2500, 0, 0, -5 + ORIGIN_THETA, 0)
         elif self.arrow_temp[0] == 'left':
             rospy.logdebug(f'箭頭：左轉')
             send.sendContinuousValue(2300, 0, 0, 5 + ORIGIN_THETA, 0)
-        if  abs(self.yaw) > 85:#成功轉90度
+        if  abs(self.yaw - self.yaw_temp) > 83:#成功轉90度
             rospy.logdebug(f'箭頭轉彎結束')
-            send.sendSensorReset(0, 0, 1)
+            self.yaw_temp = self.yaw
             self.turn_now_flag = False
             self.can_turn_flag = False
 
@@ -141,7 +145,7 @@ class Mar:
         self.theta = 0 + ORIGIN_THETA
         rospy.logdebug(f'直走')
         self.yaw = send.imu_value_Yaw
-        self.speed_x = 2300
+        self.speed_x = 2000
         if 0 < self.arrow_center.x <= 140:
             self.theta = 5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
@@ -149,10 +153,11 @@ class Mar:
             self.theta = -5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
-            if  self.yaw > 3:
+            self.yaw_calculate()
+            if  self.yaw - self.yaw_temp > 3:
                 self.theta = -3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw < -3:
+            elif self.yaw - self.yaw_temp < -3:
                 self.theta = 3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
@@ -165,16 +170,18 @@ class Mar:
                 send.sendBodyAuto(0, 0, 0, 0, 1, 0)
                 self.status = 'line'  if send.DIOValue == 24 else 'Arrow_Part'
             elif self.status == 'line':
-                self.seek_line.update()
-                self.theta_value()
+                if send.data_check == True:
+                    self.seek_line.update()
+                    self.theta_value()
                 arrow = self.arrow_yolo()
                 if arrow and self.line_status == 'arrow':
                     self.status = 'First_arrow'
                     rospy.logwarn(f'status = {self.status}')
                 send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
             elif self.status == 'First_arrow':
-                self.seek_line.update()
-                self.line_to_arrow()
+                if send.data_check == True:
+                    self.seek_line.update()
+                    self.line_to_arrow()
                 send.sendContinuousValue(self.speed_x, self.speed_y, 0, self.theta, 0)
             elif self.status == 'Arrow_Part':
                 if self.turn_now_flag:
@@ -183,13 +190,12 @@ class Mar:
                     self.arrow_yolo()
                     if self.can_turn_flag:
                         rospy.loginfo('can turn !!!')
-                        if self.arrow_center.y >= 165:
+                        if self.arrow_center.y >= 175:
                             self.arrow_cnt_times += 1
                         if self.arrow_cnt_times >= 4:
                             self.turn_now_flag = True
                             self.arrow_cnt_times = 0
                     self.imu_go()
-            rospy.loginfo(f'walk status = {self.status}')
         else:
             if self.status != 'First':
                 self.status = 'First'
@@ -200,25 +206,32 @@ class Seek_line:
         self.upper_center = Coordinate(0, 0)
         self.lower_center = Coordinate(0, 0)
 
-    def update(self):
-        img_size = np.array(send.color_mask_subject_size)
-        img_xmin = np.array(send.color_mask_subject_XMin)
-        img_xmax = np.array(send.color_mask_subject_XMax)
-        img_ymin = np.array(send.color_mask_subject_YMin)
-        img_ymax = np.array(send.color_mask_subject_YMax)
-        filter_img_size = img_size > 450
-        has_object = filter_img_size.any()
+    def cvt_list2d2numpy(self, list2d):
+        max_len = max([len(sub_lst) for sub_lst in list2d])
+        np_array = np.vstack([np.pad(np.array(lst), (0, (max_len - len(lst)))) for lst in list2d])
+        return np_array
 
+    def update(self):
+        img_size = self.cvt_list2d2numpy(send.color_mask_subject_size)
+        img_xmin = self.cvt_list2d2numpy(send.color_mask_subject_XMin)
+        img_xmax = self.cvt_list2d2numpy(send.color_mask_subject_XMax)
+        img_ymin = self.cvt_list2d2numpy(send.color_mask_subject_YMin)
+        img_ymax = self.cvt_list2d2numpy(send.color_mask_subject_YMax)
+
+        filter_img_size = img_size > 380
+        has_object = filter_img_size.any()
+        send.data_check = False
         if not has_object:
             rospy.logdebug(f'no object')
             self.upper_center.x, self.upper_center.y = 0, 0
             self.lower_center.x, self.lower_center.y = 0, 0
             return
-        img_xmin_new = img_xmin[filter_img_size].min()
-        img_xmax_new = img_xmax[filter_img_size].max()
-        img_ymin_new = img_ymin[filter_img_size].min()
-        img_ymax_new = img_ymax[filter_img_size].max()
-        send.drawImageFunction(1, 1, img_xmin_new, img_xmax_new, img_ymin_new, img_ymax_new, 255, 0, 255)
+        
+        img_xmin_new = int(img_xmin[filter_img_size].min())
+        img_xmax_new = int(img_xmax[filter_img_size].max())
+        img_ymin_new = int(img_ymin[filter_img_size].min())
+        img_ymax_new = int(img_ymax[filter_img_size].max())
+        send.drawImageFunction(7, 1, img_xmin_new, img_xmax_new, img_ymin_new, img_ymax_new, 255, 0, 255)
         #影像輸出為一維陣列，8bits
         img_data = np.frombuffer(send.Label_Model, dtype = np.uint8)
         img_data = img_data.reshape(240, 320)
@@ -227,18 +240,16 @@ class Seek_line:
         y_coord, x_coord = np.where(img_data != 0)
 
         if len(x_coord) == 0:
-            rospy.logdebug(f'no x_coord')
             self.upper_center.x, self.upper_center.y = 0, 0
             self.lower_center.x, self.lower_center.y = 0, 0
             return
         
         middle_y = (np.max(y_coord) + np.min(y_coord)) // 2
-
         upper_filter = y_coord <= middle_y
         upper_x, upper_y = x_coord[upper_filter], y_coord[upper_filter]
         self.upper_center.x = np.mean(upper_x) + img_xmin_new
         self.upper_center.y = np.mean(upper_y) + img_ymin_new
-
+        
         lower_filter = y_coord > middle_y
         lower_x, lower_y = x_coord[lower_filter], y_coord[lower_filter]
         self.lower_center.x = np.mean(lower_x) + img_xmin_new
