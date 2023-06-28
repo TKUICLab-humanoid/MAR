@@ -3,12 +3,14 @@
 from collections import Counter, deque
 import rospy
 import numpy as np
+import sys
+sys.path.append('/home/iclab/Desktop/kid_hurocup/src/strategy')
 from Python_API import Sendmessage
 import time
 # import cv2
 import math
 
-ORIGIN_THETA = 0
+ORIGIN_THETA = 1
 ORIGIN_SPEED = 3000
 send = Sendmessage()
 
@@ -136,7 +138,7 @@ class Mar:
         elif self.arrow_temp[0] == 'left':
             rospy.logdebug(f'箭頭：左轉')
             send.sendContinuousValue(2300, 0, 0, 5 + ORIGIN_THETA, 0)
-        if  abs(self.yaw - self.yaw_temp) > 86:#成功轉90度
+        if  abs(self.yaw - self.yaw_temp) > 82:#成功轉90度
             rospy.logdebug(f'箭頭轉彎結束')
             self.yaw_temp = self.yaw
             self.turn_now_flag = False
@@ -155,19 +157,20 @@ class Mar:
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
             self.yaw_calculate()
-            if  self.yaw - self.yaw_temp > 3:
+            if  self.yaw - self.yaw_temp > 0:
                 self.theta = -3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw - self.yaw_temp < -3:
+            elif self.yaw - self.yaw_temp < -6:
                 self.theta = 3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
     
     def main(self):
         if send.is_start:
+            print(self.status)
             if self.status == 'First':
                 self.initial()
-                time.sleep(0.01)
+                time.sleep(1)
                 send.sendBodyAuto(0, 0, 0, 0, 1, 0)
                 self.status = 'line'  if send.DIOValue == 24 else 'Arrow_Part'
             elif self.status == 'line' and send.DIOValue == 24:
@@ -199,6 +202,7 @@ class Mar:
                     self.imu_go()
         else:
             if self.status != 'First':
+                # self.initial()
                 self.status = 'First'
                 send.sendBodyAuto(0, 0, 0, 0, 1, 0)
 
@@ -223,6 +227,7 @@ class Seek_line:
         # img_xmax = np.array(send.color_mask_subject_XMax)
         # img_ymin = np.array(send.color_mask_subject_YMin)
         # img_ymax = np.array(send.color_mask_subject_YMax)
+        print(img_size)
         filter_img_size = img_size > 380
         has_object = filter_img_size.any()
         send.data_check = False

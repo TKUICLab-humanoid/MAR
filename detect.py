@@ -51,10 +51,14 @@ if __name__ == "__main__":
     # parser.add_argument("--coco_path", type=str, help="Path to COCO 2017 Val folder")
     # parser.add_argument("--quiet","-q", action='store_true', help="Disable logging (except errors)")
 
-    model_add = '/home/iclab/Desktop/MAR/src/strategy/Kidsize_HuroCup/47/best-int8_edgetpu.tflite'
+    # model_add = '/home/iclab/Desktop/MAR/src/strategy/Kidsize_HuroCup/82/best-int8_edgetpu.tflite'
+    # conf_thresh = 0.7                                                                           #信心閥值
+    # iou_thresh = 0.002                                                                        #真實框與檢測框重疊度
+    # yaml_add = '/home/iclab/Desktop/MAR/src/strategy/Kidsize_HuroCup/targetdata320.yaml'
+    model_add = '/home/iclab/Desktop/kid_hurocup/src/strategy/mar/82/best-int8_edgetpu.tflite'
     conf_thresh = 0.7                                                                           #信心閥值
     iou_thresh = 0.002                                                                        #真實框與檢測框重疊度
-    yaml_add = '/home/iclab/Desktop/MAR/src/strategy/Kidsize_HuroCup/targetdata320.yaml'
+    yaml_add = '/home/iclab/Desktop/kid_hurocup/src/strategy/mar/targetdata320.yaml'
     quiet = False
 
     # args = parser.parse_args()
@@ -95,7 +99,7 @@ if __name__ == "__main__":
             # 註解3行
             # cv2.imshow("vedio",image)
             # if cv2.waitKey(1)==ord('q'):
-                # break
+            #     break
         except rospy.ROSInterruptException:
             pass
 
