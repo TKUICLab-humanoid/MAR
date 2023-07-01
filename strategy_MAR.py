@@ -4,7 +4,7 @@ from collections import Counter, deque
 import rospy
 import numpy as np
 import sys
-sys.path.append('/home/iclab/Desktop/kid_hurocup/src/strategy')
+# sys.path.append('/home/iclab/Desktop/kid_hurocup/src/strategy')
 from Python_API import Sendmessage
 import time
 # import cv2
