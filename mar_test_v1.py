@@ -3,13 +3,13 @@
 from collections import Counter, deque
 import rospy
 import numpy as np
-from Python_API import Sendmessage
+from Python_APIa import Sendmessage
 import time
 import math
 
 ORIGIN_THETA = 0
 ORIGIN_LINE_SPEED = 3000
-ORIGIN_ARROW_SPEED = 2000
+ORIGIN_ARROW_SPEED = 3000
 
 send = Sendmessage()
 
@@ -26,7 +26,7 @@ class Coordinate:
 class Mar:
     def __init__(self):
         rospy.init_node('mar', anonymous=True, log_level=rospy.DEBUG)
-        # send.use_new_color_mask = True
+        send.use_new_color_mask = True
         self.initial()
         self.speed_x = 0
         self.speed_y = 0
@@ -43,13 +43,14 @@ class Mar:
         self.turn_now_flag = False
         self.arrow_cnt_times = 0                        
         self.line_status = 'online'
-        send.sendHeadMotor(2, 1350, 50)
+        send.sendHeadMotor(2, 1400, 50)
         send.sendHeadMotor(1, 2048, 50)
         send.sendSensorReset(1, 1, 1)
 
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
+        rospy.loginfo(f'slope = {slope}')
         
         if middle_point.y > 180:
             if self.seek_line.lower_center.x > 220:
@@ -73,6 +74,9 @@ class Mar:
                 self.speed_x = ORIGIN_LINE_SPEED + 300
             elif 1.5 <= abs(slope) < 4:
                 self.theta = 2 if slope > 0 else -2
+                self.speed_x = ORIGIN_LINE_SPEED + 300
+            elif 1 <= abs(slope) < 1.5:
+                self.theta = 3 if slope > 0 else -3
                 self.speed_x = ORIGIN_LINE_SPEED + 200
             else:
                 self.theta = 4 if slope > 0 else -4
@@ -81,17 +85,17 @@ class Mar:
             if middle_point.x == 0 and middle_point.y == 0:
                 self.theta = ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
-            elif self.seek_line.lower_center.x < 140 and abs(slope) > 2:
+            elif self.seek_line.lower_center.x < 140 and abs(slope) > 5:
                 self.theta = 5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
-            elif self.seek_line.lower_center.x > 180 and abs(slope) > 2:
+            elif self.seek_line.lower_center.x > 180 and abs(slope) > 5:
                 self.theta = -5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
 
             self.line_status = 'online'
             
-        rospy.logdebug(f'speed = {self.speed_x}')
-        rospy.logdebug(f'theta = {self.theta}')
+        # rospy.logdebug(f'speed = {self.speed_x}')
+        # rospy.logdebug(f'theta = {self.theta}')
 
     def line_to_arrow(self):
         slope = self.seek_line.calculate_slope()
@@ -118,7 +122,7 @@ class Mar:
     def arrow_yolo(self):
         self.arrow_center.x, self.arrow_center.y = 0, 0
         self.arrow_temp.append(send.yolo_Label)
-        rospy.loginfo(f" arrow list: {self.arrow_temp}")
+        rospy.logdebug(f" arrow list: {self.arrow_temp}")
         arrow_cnt_temp = len(set(self.arrow_temp))
 
         if arrow_cnt_temp == 1 and self.arrow_temp[0] != 'None':
@@ -148,11 +152,11 @@ class Mar:
 
         if self.arrow_temp[0] == 'right':
             rospy.logdebug(f'箭頭：右轉')
-            self.speed_x = ORIGIN_ARROW_SPEED + 500
+            self.speed_x = ORIGIN_ARROW_SPEED
             self.theta = -5 + ORIGIN_THETA
         elif self.arrow_temp[0] == 'left':
             rospy.logdebug(f'箭頭：左轉')
-            self.speed_x = ORIGIN_ARROW_SPEED + 300
+            self.speed_x = ORIGIN_ARROW_SPEED
             self.theta = 5 + ORIGIN_THETA
 
         # send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
@@ -165,9 +169,9 @@ class Mar:
         self.speed_x = ORIGIN_ARROW_SPEED
 
         if 0 < self.arrow_center.x <= 140:
-            self.theta = 3 + ORIGIN_THETA
+            self.theta = 5 + ORIGIN_THETA
         elif self.arrow_center.x >= 180:
-            self.theta = -3 + ORIGIN_THETA
+            self.theta = -5 + ORIGIN_THETA
         else:
             if  self.yaw > 8:
                 self.theta = -3 + ORIGIN_THETA
@@ -194,12 +198,12 @@ class Mar:
                 if arrow and self.line_status == 'arrow':
                     self.status = 'First_arrow'
                     rospy.logwarn(f'First_arrow')
-                # send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
+
             elif self.status == 'First_arrow':
                 if send.data_check:
                     self.seek_line.update()
                     self.line_to_arrow()
-                # send.sendContinuousValue(self.speed_x, self.speed_y, 0, self.theta, 0)
+                    
             elif self.status == 'Arrow_Part':
                 if self.turn_now_flag:
                     self.arrow_turn()
@@ -230,9 +234,11 @@ class Mar:
 
         else:
             if self.status != 'First':
-                self.status = 'First'
                 send.sendBodyAuto(0, 0, 0, 0, 1, 0)
-                # send.first_in_color_mask = True
+                send.first_in_color_mask = True
+            
+            self.status = 'First'
+            self.initial()
 
 class Seek_line:
     def __init__(self):
@@ -254,19 +260,24 @@ class Seek_line:
         filter_img_size = img_size > 380
         has_object = filter_img_size.any()
         send.data_check = False
-        # send.first_in_color_mask = False
+        send.first_in_color_mask = False
         
         if not has_object:
             rospy.logdebug(f'no object')
             self.upper_center.x, self.upper_center.y = 0, 0
             self.lower_center.x, self.lower_center.y = 0, 0
+            send.drawImageFunction(2, 0, 0, 0, 0, 0, 255, 0, 255)
+            send.drawImageFunction(3, 0, 0, 0, 0, 0, 255, 0, 255)
             return
         
         img_xmin_new = int(img_xmin[filter_img_size].min())
         img_xmax_new = int(img_xmax[filter_img_size].max())
         img_ymin_new = int(img_ymin[filter_img_size].min())
         img_ymax_new = int(img_ymax[filter_img_size].max())
-        send.drawImageFunction(7, 1, img_xmin_new, img_xmax_new, img_ymin_new, img_ymax_new, 255, 0, 255)
+        if img_ymin_new < 50:
+            img_ymin_new = 50
+
+        send.drawImageFunction(2, 1, img_xmin_new, img_xmax_new, img_ymin_new, img_ymax_new, 255, 0, 255)
         #影像輸出為一維陣列，8bits
         img_data = np.frombuffer(send.Label_Model, dtype = np.uint8)
         img_data = img_data.reshape(240, 320)
@@ -289,7 +300,7 @@ class Seek_line:
         lower_x, lower_y = x_coord[lower_filter], y_coord[lower_filter]
         self.lower_center.x = np.mean(lower_x) + img_xmin_new
         self.lower_center.y = np.mean(lower_y) + img_ymin_new
-        send.drawImageFunction(2, 0, int(self.upper_center.x), int(self.lower_center.x), int(self.upper_center.y), int(self.lower_center.y), 0, 0, 0)
+        send.drawImageFunction(3, 0, int(self.upper_center.x), int(self.lower_center.x), int(self.upper_center.y), int(self.lower_center.y), 0, 0, 0)
 
     def calculate_slope(self):
         delta = self.upper_center - self.lower_center
