@@ -8,7 +8,7 @@ import time
 import math
 
 ORIGIN_THETA = 0
-ORIGIN_LINE_SPEED = 3000
+ORIGIN_LINE_SPEED = 4000
 ORIGIN_ARROW_SPEED = 3000
 
 send = Sendmessage()
@@ -49,12 +49,13 @@ class Mar:
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
-        rospy.loginfo(f'slope = {slope}')
+        # rospy.loginfo(f'slope = {slope}')
         
-        if middle_point.y > 180:
+        if middle_point.y >= 160:
             if self.seek_line.lower_center.x > 220:
                 self.theta = -5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
+                print('aa')
             elif self.seek_line.lower_center.x < 80:
                 self.theta = 5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
@@ -84,10 +85,10 @@ class Mar:
             if middle_point.x == 0 and middle_point.y == 0:
                 self.theta = ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
-            elif self.seek_line.lower_center.x < 140 and abs(slope) > 3:
+            elif self.seek_line.lower_center.x < 120 and abs(slope) > 3:
                 self.theta = 5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
-            elif self.seek_line.lower_center.x > 180 and abs(slope) > 3:
+            elif self.seek_line.lower_center.x > 200 and abs(slope) > 3:
                 self.theta = -5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
 
@@ -120,15 +121,16 @@ class Mar:
     def arrow_yolo(self):
         self.arrow_center.x, self.arrow_center.y = 0, 0
         self.arrow_temp.append(send.yolo_Label)
-        rospy.logdebug(f" arrow list: {self.arrow_temp}")
+        # rospy.logdebug(f" arrow list: {self.arrow_temp}")
         arrow_cnt_temp = len(set(self.arrow_temp))
 
         if arrow_cnt_temp == 1 and self.arrow_temp[0] != 'None':
             if self.arrow_temp[0] == 'left' or self.arrow_temp[0] == 'right':
-                rospy.loginfo("!!!!!!! set can_tuen_flag")
+                # rospy.loginfo("!!!!!!! set can_tuen_flag")
                 self.can_turn_flag = True
             else:
                 self.can_turn_flag = False
+            rospy.loginfo(f'arrow = {self.arrow_temp[0]}')
 
             self.arrow_center.y = send.yolo_Y
             self.arrow_center.x = send.yolo_X
@@ -209,7 +211,7 @@ class Mar:
                     if self.can_turn_flag:
                         rospy.loginfo('can turn !!!')
 
-                        if self.arrow_center.y >= 160:
+                        if self.arrow_center.y >= 140:
                             self.arrow_cnt_times += 1
 
                         if self.arrow_cnt_times >= 4:
@@ -269,8 +271,8 @@ class Seek_line:
         img_xmax_new = int(img_xmax[filter_img_size].max())
         img_ymin_new = int(img_ymin[filter_img_size].min())
         img_ymax_new = int(img_ymax[filter_img_size].max())
-        if img_ymin_new < 50:
-            img_ymin_new = 50
+        # if img_ymin_new < 40:
+        #     img_ymin_new = 40
 
         send.drawImageFunction(2, 1, img_xmin_new, img_xmax_new, img_ymin_new, img_ymax_new, 255, 0, 255)
         #影像輸出為一維陣列，8bits
