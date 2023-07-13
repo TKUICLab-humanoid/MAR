@@ -1,0 +1,5 @@
+train: /home/aa/yolov5/data/ball/train/images
+val: /home/aa/yolov5/data/ball/valid/images
+
+nc: 3
+names: ['door', 'ball', 'qq']

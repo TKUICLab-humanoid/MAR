@@ -49,9 +49,7 @@ class Mar:
 
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
-        print(slope)
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
-        print(self.seek_line.lower_center.x)
         if middle_point.y > 180:
             if self.seek_line.lower_center.x > 220:
                 self.theta = -5 + ORIGIN_THETA
@@ -104,8 +102,10 @@ class Mar:
             self.speed_x = -500
             self.speed_y = 500 if slope > 0 else 800
         if self.arrow_cnt_times >= 5:
-            self.yaw_temp = send.imu_value_Yaw
+            send.sendSensorReset(0, 0, 1)
+            # self.yaw_temp = send.imu_value_Yaw
             self.arrow_cnt_times = 0
+            self.speed_y = 0
             send.sendHeadMotor(2, 1500, 50)
             self.status = 'Arrow_Part'
 
@@ -115,6 +115,7 @@ class Mar:
         rospy.loginfo(f" arrow list: {self.arrow_temp}")
         arrow_cnt_temp = len(set(self.arrow_temp))
         if arrow_cnt_temp == 1 and self.arrow_temp[0] != 'None':
+            self.can_turn_flag = False
             if self.arrow_temp[0] == 'left' or self.arrow_temp[0] == 'right':
                 rospy.logwarn("!!!!!!! set can_tuen_flag")
                 self.can_turn_flag = True
@@ -131,16 +132,17 @@ class Mar:
 
     def arrow_turn(self):
         self.yaw = send.imu_value_Yaw
-        self.yaw_calculate()
+        # self.yaw_calculate()
         if self.arrow_temp[0] == 'right':
             rospy.logdebug(f'箭頭：右轉')
-            send.sendContinuousValue(2500, 0, 0, -6 + ORIGIN_THETA, 0)
+            send.sendContinuousValue(2000, 0, 0, -6 + ORIGIN_THETA, 0)
         elif self.arrow_temp[0] == 'left':
             rospy.logdebug(f'箭頭：左轉')
             send.sendContinuousValue(2300, 0, 0, 5 + ORIGIN_THETA, 0)
-        if  abs(self.yaw - self.yaw_temp) > 82:#成功轉90度
+        if  abs(self.yaw) > 85:#成功轉90度
+            send.sendSensorReset(0, 0, 1)
             rospy.logdebug(f'箭頭轉彎結束')
-            self.yaw_temp = self.yaw
+            # self.yaw_temp = self.yaw
             self.turn_now_flag = False
             self.can_turn_flag = False
 
@@ -148,19 +150,19 @@ class Mar:
         self.theta = 0 + ORIGIN_THETA
         rospy.logdebug(f'直走')
         self.yaw = send.imu_value_Yaw
-        self.speed_x = 2000
-        if 0 < self.arrow_center.x <= 140:
+        rospy.logdebug({self.yaw})
+        self.speed_x = 2800
+        if 0 < self.arrow_center.x <= 130:
             self.theta = 5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
-        elif self.arrow_center.x >= 180:
+        elif self.arrow_center.x >= 190:
             self.theta = -5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
-            self.yaw_calculate()
-            if  self.yaw - self.yaw_temp > 0:
+            if  self.yaw  > 3:
                 self.theta = -3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw - self.yaw_temp < -6:
+            elif self.yaw  < -3:
                 self.theta = 3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
@@ -227,7 +229,6 @@ class Seek_line:
         # img_xmax = np.array(send.color_mask_subject_XMax)
         # img_ymin = np.array(send.color_mask_subject_YMin)
         # img_ymax = np.array(send.color_mask_subject_YMax)
-        print(img_size)
         filter_img_size = img_size > 380
         has_object = filter_img_size.any()
         send.data_check = False

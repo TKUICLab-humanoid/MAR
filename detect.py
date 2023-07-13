@@ -57,7 +57,7 @@ if __name__ == "__main__":
     # yaml_add = '/home/iclab/Desktop/MAR/src/strategy/Kidsize_HuroCup/targetdata320.yaml'
     model_add = '/home/iclab/Desktop/kid_hurocup/src/strategy/mar/82/best-int8_edgetpu.tflite'
     conf_thresh = 0.7                                                                           #信心閥值
-    iou_thresh = 0.002                                                                        #真實框與檢測框重疊度
+    iou_thresh = 0.2                                                                        #真實框與檢測框重疊度
     yaml_add = '/home/iclab/Desktop/kid_hurocup/src/strategy/mar/targetdata320.yaml'
     quiet = False
 
