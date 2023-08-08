@@ -50,14 +50,20 @@ class Mar:
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
         # rospy.loginfo(f'slope = {slope}')
-        
-        if middle_point.y >= 160:
+        if self.seek_line.imu_flag:
+            if send.imu_value_Yaw > 5:
+                self.theta = -2
+            elif send.imu_value_Yaw < -5:
+                self.theta = 2
+            else:
+                self.theta = 0
+        elif middle_point.y >= 160:
             if self.seek_line.lower_center.x > 220:
-                self.theta = -5 + ORIGIN_THETA
+                self.theta = -3 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
-                print('aa')
+                # print('aa')
             elif self.seek_line.lower_center.x < 80:
-                self.theta = 5 + ORIGIN_THETA
+                self.theta = 3 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
             else:
                 self.line_status = 'arrow'#進入第二階段的指標，線在機器人螢幕的正下方
@@ -86,10 +92,10 @@ class Mar:
                 self.theta = ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
             elif self.seek_line.lower_center.x < 120 and abs(slope) > 3:
-                self.theta = 5 + ORIGIN_THETA
+                self.theta = 3 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
             elif self.seek_line.lower_center.x > 200 and abs(slope) > 3:
-                self.theta = -5 + ORIGIN_THETA
+                self.theta = -3 + ORIGIN_THETA
                 self.speed_x = ORIGIN_LINE_SPEED
 
             self.line_status = 'online'
@@ -241,6 +247,7 @@ class Seek_line:
     def __init__(self):
         self.upper_center = Coordinate(0, 0)
         self.lower_center = Coordinate(0, 0)
+        self.imu_flag = False
 
     def cvt_list2d2numpy(self, list2d):
         max_len = max([len(sub_lst) for sub_lst in list2d])
@@ -271,6 +278,10 @@ class Seek_line:
         img_xmax_new = int(img_xmax[filter_img_size].max())
         img_ymin_new = int(img_ymin[filter_img_size].min())
         img_ymax_new = int(img_ymax[filter_img_size].max())
+        if img_xmin_new < 5 and img_xmax_new > 315 and img_ymin_new < 5 and img_ymax_new > 235:
+            self.imu_flag = True
+        else:
+            self.imu_flag = False
         # if img_ymin_new < 40:
         #     img_ymin_new = 40
 
