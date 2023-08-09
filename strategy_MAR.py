@@ -10,8 +10,8 @@ import time
 # import cv2
 import math
 
-ORIGIN_THETA = 1
-ORIGIN_SPEED = 3000
+ORIGIN_THETA = 0
+ORIGIN_SPEED = 5500
 send = Sendmessage()
 
 class Coordinate:
@@ -159,11 +159,11 @@ class Mar:
             self.theta = -5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
-            if  self.yaw  > 3:
+            if  self.yaw  > 5:
                 self.theta = -3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw  < -3:
-                self.theta = 3 + ORIGIN_THETA
+            elif self.yaw  < -1:
+                self.theta = 4 + ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
     
