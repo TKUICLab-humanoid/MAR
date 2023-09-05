@@ -4,7 +4,7 @@ import rospy
 import numpy as np
 from rospy import Publisher
 from tku_msgs.msg import Interface,HeadPackage,SandHandSpeed,DrawImage,SingleMotorData,\
-SensorSet,ObjectList,LabelModelObjectList,RobotPos,SetGoalPoint,SoccerDataList,SensorPackage,YoloData
+SensorSet,ObjectList,LabelModelObjectList,RobotPos,SetGoalPoint,SoccerDataList,SensorPackage,YoloData, parameter,Parameter_message
 from std_msgs.msg import Int16,Bool
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -21,6 +21,9 @@ class Sendmessage:
         self.continuous_value_pub = rospy.Publisher("/ChangeContinuousValue_Topic",Interface, queue_size=100)
         self.single_motor_data_pub = rospy.Publisher("/package/SingleMotorData",SingleMotorData, queue_size=100)
         self.sensor_pub = rospy.Publisher("sensorset",SensorSet, queue_size=100)
+        self.paradata_pub = rospy.Publisher("/package/parameterdata",Parameter_message, queue_size=100)
+        self.parameter_pub = rospy.Publisher("/web/parameter_Topic",parameter, queue_size=100)
+        self.continuous_back = rospy.Publisher("/walkinggait/Continuousback",Bool, queue_size=100)
         
         self.Web = False
         self.Label_Model = [0 for i in range(320*240)]
@@ -119,6 +122,97 @@ class Sendmessage:
         MotorData.Position = Position
         MotorData.Speed = Speed
         self.single_motor_data_pub.publish(MotorData)
+
+    def sendWalkParameter(self, function, *,\
+                                walk_mode = 1,\
+                                com_y_shift = 0,\
+                                y_swing = 6.5,\
+                                period_t = 450,\
+                                t_dsp = 0,\
+                                base_default_z = 3,\
+                                right_z_shift = 0,\
+                                base_lift_z = 4,\
+                                com_height = 62,\
+                                stand_height = 47.3,\
+                                back_flag = False):
+        
+        #function       指定功能 save為儲存參數 send為送參數給FPGA ※send可以直接做動作,但如果不save次做動作會回歸原本參數
+        #walk_mode      指定步態 1為走路 2為上板 3為下板 
+        #com_y_shift    控制走路起步的質心位置,上下板為控制第2步的質心位置
+        #y_swing        質心晃動程度
+        #period_t       步態週期
+        #t_dsp          雙支撐時間(比例)
+        #base_default_z 抬腳高
+        #right_z_shift  控制上下板第2步的抬腳高補償
+        #base_lift_z    板子高度
+        #com_height     質心高度
+        #stand_height   機器人初始站姿高度(由踝關節(15、21)到髖關節(11、17)馬達的距離)
+        #back_flag      後退旗標
+        walkparameter = parameter()
+        parasend2FPGA = Parameter_message()
+
+        if function == 'save':
+            if walk_mode == 1:
+                self.continuous_back.publish(back_flag)
+    
+            walkparameter.mode = walk_mode
+            walkparameter.X_Swing_Range = com_y_shift
+            walkparameter.Y_Swing_Range = y_swing if y_swing >= 6.5 else 6.5
+            walkparameter.Z_Swing_Range = com_height
+            walkparameter.Period_T = period_t if period_t % 30 == 0 else 450
+            walkparameter.Period_T2 = 720
+            walkparameter.Sample_Time = 20
+            walkparameter.OSC_LockRange = t_dsp if t_dsp >= 0 else 0
+            walkparameter.BASE_Default_Z = base_default_z if base_default_z >= 0 else 0
+            walkparameter.X_Swing_COM = right_z_shift
+            walkparameter.Y_Swing_Shift = stand_height
+            walkparameter.BASE_LIFT_Z = base_lift_z
+            walkparameter.rightfoot_shift_z = right_z_shift
+            walkparameter.com_y_swing = com_y_shift
+            walkparameter.now_stand_height = stand_height
+            walkparameter.now_com_height = com_height
+            walkparameter.Stand_Balance = False
+
+            self.parameter_pub.publish(walkparameter)
+        elif function == 'send':
+            parasend2FPGA.Walking_Mode = walk_mode
+            parasend2FPGA.X_Swing_Range = com_y_shift
+            parasend2FPGA.Y_Swing_Range = y_swing if y_swing >= 6.5 else 6.5
+            parasend2FPGA.Z_Swing_Range = com_height
+            parasend2FPGA.Period_T = period_t if period_t % 30 == 0 else 450
+            parasend2FPGA.Period_T2 = 720
+            parasend2FPGA.Sample_Time = 20
+            parasend2FPGA.OSC_LockRange = t_dsp if t_dsp >= 0 else 0
+            parasend2FPGA.BASE_Default_Z = base_default_z if base_default_z >= 0 else 0
+            parasend2FPGA.X_Swing_COM = right_z_shift
+            parasend2FPGA.Y_Swing_Shift = stand_height
+            parasend2FPGA.BASE_LIFT_Z = base_lift_z
+            parasend2FPGA.rightfoot_shift_z = right_z_shift
+            parasend2FPGA.com_y_swing = com_y_shift
+            parasend2FPGA.now_stand_height = stand_height
+            parasend2FPGA.now_com_height = com_height
+            parasend2FPGA.Stand_Balance = False
+
+            self.paradata_pub.publish(parasend2FPGA)
+        else:
+            rospy.logerr(f'sendWalkParameter Error !!!')
+
+    def sendPIDSet(self,P,I,D,MotorID):
+    #設定馬達PID參數(原廠設定 P:800 I:0 D:0)
+        msg = SensorSet()
+        msg.motor_P = P
+        msg.motor_I = I
+        msg.motor_D = D
+        msg.motorID = MotorID
+        for i in range(3):
+            if  i == 0:
+                msg.Pflag
+            elif i == 1:
+                msg.Iflag
+            else:
+                msg.Dflag
+            self.pid_sub.publish(msg)
+
 
     def sendSensorSet(self,P,I,D,modeset):
         msg = SensorSet()
