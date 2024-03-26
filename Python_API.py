@@ -293,7 +293,7 @@ class Sendmessage:
         self.imu_value_Pitch = msg.IMUData[1]
         self.imu_value_Yaw   = msg.IMUData[2]
     def DIOackFunction(self,msg):
-        if msg.data & 0x10:
+        if msg.data & 0x20:
             self.is_start = True
         else:
             self.is_start = False
