@@ -3,6 +3,8 @@ build/
 
 devel/
 
+__pycache__/
+
 \.catkin_workspace
 
 *.ods
