@@ -43,7 +43,7 @@ class Mar:
         self.arrow_cnt_times = 0
         self.yaw_temp = 0                                  
         self.line_status = 'online'
-        send.sendHeadMotor(2, 1450, 50)
+        send.sendHeadMotor(2, 1350, 50)
         send.sendHeadMotor(1, 2048, 50)
         send.sendSensorReset(1, 1, 1)
 
