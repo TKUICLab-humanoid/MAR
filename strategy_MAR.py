@@ -11,7 +11,7 @@ import time
 import math
 
 ORIGIN_THETA = 0
-ORIGIN_SPEED = 2800
+ORIGIN_SPEED = 2500
 send = Sendmessage()
 
 class Coordinate:
@@ -43,16 +43,16 @@ class Mar:
         self.arrow_cnt_times = 0
         self.yaw_temp = 0                                  
         self.line_status = 'online'
-        send.sendHeadMotor(2, 1350, 50)
+        send.sendHeadMotor(2, 1400, 50)
         send.sendHeadMotor(1, 2048, 50)
         send.sendSensorReset(1, 1, 1)
 
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
-        if middle_point.y > 180:
+        if middle_point.y > 170:
             if self.seek_line.lower_center.x > 220:
-                self.theta = -5 + ORIGIN_THETA
+                self.theta = -6 + ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x < 80:
                 self.theta = 6+ ORIGIN_THETA
@@ -71,7 +71,7 @@ class Mar:
                 self.theta = 1 if slope > 0 else -1
                 self.speed_x = ORIGIN_SPEED + 300
             elif 1.5 <= abs(slope) < 4:
-                self.theta = 3 if slope > 0 else -2
+                self.theta = 3 if slope > 0 else -3
                 self.speed_x = ORIGIN_SPEED + 200
             else:
                 self.theta = 4 if slope > 0 else -4
@@ -96,14 +96,13 @@ class Mar:
             self.speed_x = 0
             self.arrow_cnt_times += 1
         elif 7 < abs(slope) < 15:
-            self.theta = 1 if slope > 0 else -2 
+            self.theta = 1 if slope > 0 else -1 
         elif abs(slope) < 7:
-            self.theta = 3 if slope > 0 else -4
+            self.theta = 3 if slope > 0 else -3
             self.speed_x = 500
-            self.speed_y = -500 if slope > 0 else -800
+            self.speed_y = 0 if slope > 0 else 0
         if self.arrow_cnt_times >= 5:
             send.sendSensorReset(0, 0, 1)
-            # self.yaw_temp = send.imu_value_Yaw
             self.arrow_cnt_times = 0
             self.speed_y = 0
             send.sendHeadMotor(2, 1500, 50)
@@ -140,7 +139,7 @@ class Mar:
             send.sendContinuousValue(2000, 0, 0, -5 + ORIGIN_THETA, 0)
         elif self.arrow_temp[0] == 'left':
             rospy.logdebug(f'箭頭：左轉')
-            send.sendContinuousValue(2300, 0, 0, 5 + ORIGIN_THETA, 0)
+            send.sendContinuousValue(2000, 0, 0, 5 + ORIGIN_THETA, 0)
         if  abs(self.yaw) > 85:#成功轉90度
             send.sendSensorReset(0, 0, 1)
             rospy.logdebug(f'箭頭轉彎結束')
@@ -154,18 +153,18 @@ class Mar:
         self.yaw = send.imu_value_Yaw
         rospy.logdebug({self.yaw})
         self.speed_x = 2500
-        if 0 < self.arrow_center.x <= 130:
+        if 0 < self.arrow_center.x <= 150:
             self.theta = 5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
-        elif self.arrow_center.x >= 190:
+        elif self.arrow_center.x >= 170:
             self.theta = -5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
             if  self.yaw  > 5:
-                self.theta = -5 + ORIGIN_THETA
+                self.theta = -4+ ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw  < -1:
-                self.theta = 5+ ORIGIN_THETA
+            elif self.yaw  < -5:
+                self.theta = 4+ ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
     
@@ -190,7 +189,7 @@ class Mar:
                 if arrow and self.line_status == 'arrow':
                     self.status = 'First_arrow'
                     rospy.logwarn(f'status = {self.status}')
-                send.sendContinuousValue(self.speed_x -500 , 800, 0, self.theta, 0)
+                send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
             elif self.status == 'First_arrow':
                 if send.data_check == True:
                     self.seek_line.update()
