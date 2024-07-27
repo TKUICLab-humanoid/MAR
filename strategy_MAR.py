@@ -50,12 +50,12 @@ class Mar:
     def theta_value(self):#判斷斜率
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
-        if middle_point.y > 170:
+        if middle_point.y > 180:
             if self.seek_line.lower_center.x > 220:
-                self.theta = -6 + ORIGIN_THETA
+                self.theta = -5 + ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x < 80:
-                self.theta = 6+ ORIGIN_THETA
+                self.theta = 5+ ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             else:   
                 self.line_status = 'arrow'#進入第二階段的指標，線在機器人螢幕的正下方
@@ -124,11 +124,6 @@ class Mar:
             return True
         return False
 
-    def yaw_calculate(self):
-        if -240 > self.yaw - self.yaw_temp:
-                self.yaw = self.yaw + 360
-        elif self.yaw - self.yaw_temp > 240:
-                self.yaw = self.yaw - 360
 
     def arrow_turn(self):
         self.yaw = send.imu_value_Yaw
@@ -153,17 +148,17 @@ class Mar:
         self.yaw = send.imu_value_Yaw
         rospy.logdebug({self.yaw})
         self.speed_x = 2500
-        if 0 < self.arrow_center.x <= 150:
+        if 0 < self.arrow_center.x <= 140:
             self.theta = 5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
-        elif self.arrow_center.x >= 170:
+        elif self.arrow_center.x >= 180:
             self.theta = -5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         else:
-            if  self.yaw  > 5:
+            if  self.yaw  > 0:
                 self.theta = -4+ ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw  < -5:
+            elif self.yaw  < -8:
                 self.theta = 4+ ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
