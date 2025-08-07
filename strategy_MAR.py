@@ -14,7 +14,7 @@ ORIGIN_THETA = 0
 ORIGIN_SPEED = 4000
 send = Sendmessage()
 
-# 2025.8.1
+# 2025.8.5
 
 class Coordinate: # 計算
     def __init__(self, x, y):
@@ -53,14 +53,14 @@ class Mar:
     def theta_value(self): # 判斷斜率
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
-        if middle_point.y > 215:
+        if middle_point.y > 140:
             if self.seek_line.lower_center.x > 220:
-                self.theta = -6 + ORIGIN_THETA
-                self.speed_x = ORIGIN_SPEED
+                self.theta = -5 + ORIGIN_THETA
+                self.speed_x = ORIGIN_SPEED - 500
             elif self.seek_line.lower_center.x < 80:
-                self.theta = 6 + ORIGIN_THETA
-                self.speed_x = ORIGIN_SPEED
-            else:   
+                self.theta = 5 + ORIGIN_THETA
+                self.speed_x = ORIGIN_SPEED - 500
+            else:
                 self.line_status = 'arrow' # 進入第二階段的指標，線在機器人螢幕的正下方
                 rospy.loginfo(f'line in image = {self.line_status}')
         else:
@@ -78,17 +78,19 @@ class Mar:
                 self.speed_x = ORIGIN_SPEED - 0
             else:
                 self.theta = 6 if slope > 0 else -6
-                self.speed_x = ORIGIN_SPEED - 300
+                self.speed_x = ORIGIN_SPEED - 400
+
             if middle_point.x == 0 and middle_point.y == 0:
                 self.theta = ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x < 130 and abs(slope) > 2:
-                self.theta = 4 + ORIGIN_THETA
+                self.theta = 3 + ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             elif self.seek_line.lower_center.x > 170 and abs(slope) > 2:
-                self.theta = -4 + ORIGIN_THETA
+                self.theta = -3 + ORIGIN_THETA
                 self.speed_x = ORIGIN_SPEED
             self.line_status = 'online'
+
         rospy.logdebug(f'speed = {self.speed_x}')
         rospy.logdebug(f'theta = {self.theta}')
 
@@ -99,12 +101,13 @@ class Mar:
             self.speed_x = 0
             self.arrow_cnt_times += 1
         elif 7 < abs(slope) < 15:
+            self.speed_x = 100
             self.theta = 1 if slope > 0 else -1 
         elif abs(slope) < 7:
             self.theta = 3 if slope > 0 else -3
             self.speed_x = 300
             self.speed_y = 0 if slope > 0 else 0
-        if self.arrow_cnt_times >= 7:
+        if self.arrow_cnt_times >= 10:
             send.sendSensorReset(0, 0, 1)
             self.arrow_cnt_times = 0
             self.speed_y = 0
@@ -154,23 +157,25 @@ class Mar:
         slope = self.seek_line.calculate_slope()
         middle_point = (self.seek_line.upper_center + self.seek_line.lower_center) // 2
 
-        self.speed_x = 3000
+        self.speed_x = 3500
         
-        if middle_point.y > 100 and middle_point.y < 140:
-            if abs(slope) > 5:
-                self.arrow_to_line_flag += 1
-                rospy.loginfo(f" arrow_to_line_flag : {self.arrow_to_line_flag}")
+        if middle_point.y > 90 and middle_point.y < 140:
+            # if abs(slope) > 5:
+            self.arrow_to_line_flag += 1
+            rospy.loginfo(f'arrow_to_line')
+
         if 0 < self.arrow_center.x <= 140: # 在畫面左邊，向左修正
             self.theta = 5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
         elif self.arrow_center.x >= 180: # 在畫面右邊，向右修正
             self.theta = -5
             send.sendContinuousValue(self.speed_x, 0, 0, self.theta + ORIGIN_THETA, 0)
+
         else: # 還沒接近箭頭，以 imu 做修正
-            if  self.yaw  > 3: # 機器人偏向偏向左邊，向右修正
+            if  self.yaw  > 5: # 機器人偏向偏向左邊，向右修正
                 self.theta = -3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：右轉')
-            elif self.yaw  < -6: # 機器人偏向右邊，向左修正
+            elif self.yaw  < -5: # 機器人偏向右邊，向左修正
                 self.theta = 3 + ORIGIN_THETA
                 rospy.logdebug(f'修正：左轉')
         send.sendContinuousValue(self.speed_x, 0, 0, self.theta, 0)
@@ -195,6 +200,9 @@ class Mar:
                     self.seek_line.update()
                     self.theta_value()
                 arrow = self.arrow_yolo()
+                if arrow:
+                    self.speed_x = 1000
+                    rospy.loginfo(f'=== Can see arrow ====')
 
                 if arrow and self.line_status == 'arrow':
                     self.status = 'First_arrow'
@@ -209,6 +217,7 @@ class Mar:
 
             elif self.status == 'Arrow_Part':
                 if self.arrow_to_line_flag > 10 :
+                    send.sendHeadMotor(2, 1400, 50)
                     self.status = 'line'
                     self.line_status = 'online'
                     self.arrow_to_line_flag = 0
@@ -222,7 +231,7 @@ class Mar:
                         rospy.loginfo('can turn !!!')
                         if self.arrow_center.y >= 185:
                             self.arrow_cnt_times += 1
-                        if self.arrow_cnt_times >= 10:
+                        if self.arrow_cnt_times >= 13:
                             self.turn_now_flag = True
                             self.arrow_cnt_times = 0
                     self.seek_line.update()
